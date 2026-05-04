@@ -55,6 +55,7 @@ data class PasswordEntry(
     val encryptedPassword: String,  // AES encrypted
     val website: String = "",
     val category: PasswordCategory = PasswordCategory.OTHER,
+    val cardColorHex: String = "",
     val notes: String = "",
     val isFavorite: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),

@@ -40,7 +40,6 @@ fun VaultScreen(
 ) {
     val vc        = MaterialTheme.vaultColors
     val passwords by viewModel.passwords.collectAsStateWithLifecycle()
-    val categoryColors by viewModel.categoryColors.collectAsStateWithLifecycle()
     val searchQ   by viewModel.searchQuery.collectAsStateWithLifecycle()
     var selCat    by remember { mutableStateOf<PasswordCategory?>(null) }
     var selectedPassword by remember { mutableStateOf<PasswordEntry?>(null) }
@@ -140,7 +139,7 @@ fun VaultScreen(
                             PasswordGridCard(
                                 entry   = pw,
                                 vc      = vc,
-                                categoryColor = categoryColorFor(pw.category, vc, categoryColors),
+                                categoryColor = categoryColorFor(pw, vc),
                                 onReveal = { viewModel.getDecryptedPassword(pw.id).orEmpty() },
                                 onCopy  = { scope.launch {
                                     val plain = viewModel.getDecryptedPassword(pw.id) ?: ""
@@ -165,7 +164,7 @@ fun VaultScreen(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
                             items.forEach { pw ->
                                 PasswordListCard(entry = pw, vc = vc,
-                                    categoryColor = categoryColorFor(pw.category, vc, categoryColors),
+                                    categoryColor = categoryColorFor(pw, vc),
                                     onReveal = { viewModel.getDecryptedPassword(pw.id).orEmpty() },
                                     onCopy = { scope.launch {
                                         val plain = viewModel.getDecryptedPassword(pw.id) ?: ""
@@ -306,15 +305,11 @@ private fun PasswordListCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.Vau
     }
 }
 
-private fun categoryColorFor(
-    category: PasswordCategory,
-    vc: com.vaultapp.ui.theme.VaultColors,
-    overrides: Map<PasswordCategory, String>
-): Color {
-    overrides[category]?.takeIf { it.isNotBlank() }?.let { hex ->
+private fun categoryColorFor(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors): Color {
+    entry.cardColorHex.takeIf { it.isNotBlank() }?.let { hex ->
         runCatching { return Color(android.graphics.Color.parseColor(hex)) }
     }
-    return when (category) {
+    return when (entry.category) {
     PasswordCategory.SOCIAL -> NoteColor.LIGHT_PINK.toCardColor(vc)
     PasswordCategory.FINANCE -> NoteColor.LIGHT_GREEN.toCardColor(vc)
     PasswordCategory.ENTERTAINMENT -> NoteColor.LIGHT_BLUE.toCardColor(vc)

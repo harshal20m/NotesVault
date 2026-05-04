@@ -9,7 +9,7 @@ import com.vaultapp.data.model.PasswordEntry
 
 @Database(
     entities = [Note::class, PasswordEntry::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

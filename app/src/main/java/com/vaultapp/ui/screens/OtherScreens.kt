@@ -247,14 +247,14 @@ fun PasswordEditScreen(
                     )
                 }
             }
-            Text("Category card color (optional)", color = vc.onSurfaceVariant, fontSize = 12.sp)
+            Text("Card color (optional)", color = vc.onSurfaceVariant, fontSize = 12.sp)
             val colorPresets = listOf("", "#FCE4EC", "#E3F2FD", "#E8F5E9", "#FFF8E1", "#EDE7F6", "#FFE0B2")
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 colorPresets.forEach { hex ->
-                    val selected = viewModel.selectedCategoryColorHex.equals(hex, ignoreCase = true)
+                    val selected = viewModel.selectedCardColorHex.equals(hex, ignoreCase = true)
                     val swatchColor = if (hex.isBlank()) vc.surface else runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrDefault(vc.surface)
                     Box(
                         modifier = Modifier
@@ -266,7 +266,7 @@ fun PasswordEditScreen(
                                 color = if (selected) vc.primary else vc.outline,
                                 shape = RoundedCornerShape(10.dp)
                             )
-                            .clickable { viewModel.setSelectedCategoryColor(hex) },
+                            .clickable { viewModel.setSelectedCardColor(hex) },
                         contentAlignment = Alignment.Center
                     ) {
                         if (hex.isBlank()) Text("Ø", color = vc.onSurfaceVariant, fontSize = 12.sp)
@@ -275,11 +275,11 @@ fun PasswordEditScreen(
             }
             VaultOutlinedField(
                 label = "Custom HEX (e.g. #F5F5F5)",
-                value = viewModel.selectedCategoryColorHex,
-                onChange = { viewModel.setSelectedCategoryColor(it.take(7)) },
+                value = viewModel.selectedCardColorHex,
+                onChange = { viewModel.setSelectedCardColor(it.take(7)) },
                 vc = vc
             )
-            Text("Saved per category. Leave blank to use default app color.", color = vc.onSurfaceVariant, fontSize = 11.sp)
+            Text("Applied only to this password card. Leave blank to use category default.", color = vc.onSurfaceVariant, fontSize = 11.sp)
 
             if (viewModel.passwordHistory.isNotEmpty()) {
                 Text("Password history", color = vc.onSurfaceVariant, fontSize = 12.sp)
