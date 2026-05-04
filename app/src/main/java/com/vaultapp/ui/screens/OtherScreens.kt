@@ -1,7 +1,6 @@
 package com.vaultapp.ui.screens
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -136,6 +135,8 @@ fun RecoverScreen(onRecovered: () -> Unit, onBack: () -> Unit, vm: RecoverViewMo
     var confirmPin by remember { mutableStateOf("") }
     var sent by remember { mutableStateOf(false) }
     var err by remember { mutableStateOf("") }
+    val savedRecoveryEmail by vm.recoveryEmail.collectAsStateWithLifecycle("")
+    var sentCode by remember { mutableStateOf("") }
     Column(
         modifier = Modifier.fillMaxSize().background(vc.background).padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
@@ -153,14 +154,24 @@ fun RecoverScreen(onRecovered: () -> Unit, onBack: () -> Unit, vm: RecoverViewMo
                     err = "Please enter recovery email"
                     return@Button
                 }
+                if (savedRecoveryEmail.isBlank()) {
+                    err = "No recovery email is set yet"
+                    return@Button
+                }
+                if (!email.trim().equals(savedRecoveryEmail.trim(), ignoreCase = true)) {
+                    err = "Entered email doesn't match your setup recovery email"
+                    return@Button
+                }
                 val codeValue = (100000..999999).random().toString()
                 vm.saveRecoveryCode(codeValue)
-                val intent = Intent(Intent.ACTION_SENDTO).apply {
-                    data = Uri.parse("mailto:$email")
+                sentCode = codeValue
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "message/rfc822"
+                    putExtra(Intent.EXTRA_EMAIL, arrayOf(email.trim()))
                     putExtra(Intent.EXTRA_SUBJECT, "Vault recovery code")
                     putExtra(Intent.EXTRA_TEXT, "Your Vault recovery code is: $codeValue\nUse this code to reset your PIN.")
                 }
-                runCatching { ctx.startActivity(intent) }
+                runCatching { ctx.startActivity(Intent.createChooser(intent, "Send recovery email")) }
                 sent = true
                 err = ""
                 ToastManager.info("Recovery draft opened in your mail app")
@@ -170,6 +181,8 @@ fun RecoverScreen(onRecovered: () -> Unit, onBack: () -> Unit, vm: RecoverViewMo
             shape    = RoundedCornerShape(14.dp)
         ) { Text("Send Recovery Code", fontSize = 16.sp) }
         if (sent) {
+            Text("Recovery code: $sentCode", color = vc.onSurfaceVariant, fontSize = 12.sp)
+            Spacer(Modifier.height(6.dp))
             Spacer(Modifier.height(12.dp))
             VaultOutlinedField("Recovery code", code, { if (it.length <= 6 && it.all(Char::isDigit)) code = it }, vc)
             Spacer(Modifier.height(8.dp))
@@ -204,6 +217,7 @@ fun RecoverScreen(onRecovered: () -> Unit, onBack: () -> Unit, vm: RecoverViewMo
 @HiltViewModel
 class RecoverViewModel @Inject constructor(private val prefs: PreferencesManager) : ViewModel() {
     private var cachedCodeHash: String? = null
+    val recoveryEmail = prefs.recoveryEmail
     fun saveRecoveryCode(code: String) = viewModelScope.launch {
         cachedCodeHash = CryptoManager.hashPin(code)
         prefs.setRecoveryCodeHash(cachedCodeHash!!)
