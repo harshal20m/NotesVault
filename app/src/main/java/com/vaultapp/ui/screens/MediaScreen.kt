@@ -99,7 +99,7 @@ fun NoteMediaGrid(mediaUris: List<String>, onRemove: (String) -> Unit, onFullScr
         }
     }
     if (validUris.isEmpty()) return
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         validUris.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 row.forEach { uriString ->

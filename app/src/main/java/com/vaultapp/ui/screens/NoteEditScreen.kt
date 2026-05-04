@@ -264,18 +264,6 @@ fun NoteEditScreen(
                         inner()
                     }
                 )
-                // Mode badge
-                if (rts.editorMode == EditorMode.CHECKLIST) {
-                    Row(
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 2.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(vc.primaryContainer)
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text("✓ Checklist mode", color = vc.primary, fontSize = 11.sp)
-                    }
-                }
                 // Rich text editor - FIX: uses Column internally, NOT LazyColumn, so no infinite height crash
                 RichTextEditor(
                     state           = rts,

@@ -36,9 +36,10 @@ fun RichTextEditor(
 ) {
     val vc = MaterialTheme.vaultColors
     Column(modifier = modifier) {
-        when (state.editorMode) {
-            EditorMode.TEXT       -> TextEditor(state, vc, onContentChange)
-            EditorMode.CHECKLIST  -> ChecklistEditor(state, vc)
+        TextEditor(state, vc, onContentChange)
+        if (state.checklistItems.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            ChecklistEditor(state, vc)
         }
     }
 }
@@ -186,53 +187,41 @@ fun FormattingToolbar(
     onTags: () -> Unit
 ) {
     val vc = MaterialTheme.vaultColors
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 6.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-        verticalAlignment     = Alignment.CenterVertically
+            .padding(horizontal = 6.dp, vertical = 4.dp)
     ) {
-        // ── Mode toggles ──────────────────────────────────────────────────
-        ModeBtn(label = "Aa", active = state.editorMode == EditorMode.TEXT, vc = vc) {
-            state.editorMode = EditorMode.TEXT
-        }
-        ModeBtn(icon = Icons.Outlined.CheckBox, active = state.editorMode == EditorMode.CHECKLIST, vc = vc) {
-            state.editorMode = EditorMode.CHECKLIST
-            if (state.checklistItems.isEmpty()) state.addChecklistItem()
-        }
-
-        Spacer(Modifier.width(4.dp))
-        VerticalDivider(modifier = Modifier.height(24.dp), color = vc.outline)
-        Spacer(Modifier.width(4.dp))
-
-        // ── Format buttons (text mode only) ──────────────────────────────
-        if (state.editorMode == EditorMode.TEXT) {
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             FmtBtn(Icons.Outlined.FormatBold,        "Bold",        state.isFormatActive(SpanType.BOLD),          vc) { state.toggleFormat(SpanType.BOLD) }
             FmtBtn(Icons.Outlined.FormatItalic,      "Italic",      state.isFormatActive(SpanType.ITALIC),        vc) { state.toggleFormat(SpanType.ITALIC) }
             FmtBtn(Icons.Outlined.FormatUnderlined,  "Underline",   state.isFormatActive(SpanType.UNDERLINE),     vc) { state.toggleFormat(SpanType.UNDERLINE) }
             FmtBtn(Icons.Outlined.FormatStrikethrough,"Strike",     state.isFormatActive(SpanType.STRIKETHROUGH), vc) { state.toggleFormat(SpanType.STRIKETHROUGH) }
             FmtBtn(Icons.Outlined.Code,              "Code",        state.isFormatActive(SpanType.CODE),          vc) { state.toggleFormat(SpanType.CODE) }
-            // FIX: use AutoMirrored version to avoid crash
             FmtBtn(Icons.AutoMirrored.Outlined.FormatListBulleted, "List", false, vc) {
                 val cur = state.textFieldValue.selection.start
                 val t   = state.textFieldValue.text
-                state.textFieldValue = state.textFieldValue.copy(
-                    text = t.substring(0, cur) + "\n• " + t.substring(cur)
-                )
+                state.textFieldValue = state.textFieldValue.copy(text = t.substring(0, cur) + "\n• " + t.substring(cur))
             }
-            Spacer(Modifier.width(4.dp))
-            VerticalDivider(modifier = Modifier.height(24.dp), color = vc.outline)
-            Spacer(Modifier.width(4.dp))
+            FmtBtn(Icons.Outlined.CheckBox, "Checklist", false, vc) { state.addChecklistItem() }
         }
 
-        // ── Media / action buttons ────────────────────────────────────────
-        TBtn(Icons.Outlined.Image,    "Gallery",  vc, onAddMedia)
-        TBtn(Icons.Outlined.CameraAlt,"Camera",   vc, onCamera)
-        TBtn(Icons.Outlined.Mic,      "Voice",    vc, onVoice)
-        TBtn(Icons.Outlined.Palette,  "Color",    vc, onColorPicker)
-        TBtn(Icons.Outlined.Tag,      "Tags",     vc, onTags)
+        Spacer(Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TBtn(Icons.Outlined.Image,    "Gallery",  vc, onAddMedia)
+            TBtn(Icons.Outlined.CameraAlt,"Camera",   vc, onCamera)
+            TBtn(Icons.Outlined.Mic,      "Voice",    vc, onVoice)
+            TBtn(Icons.Outlined.Palette,  "Color",    vc, onColorPicker)
+            TBtn(Icons.Outlined.Tag,      "Tags",     vc, onTags)
+        }
     }
 }
 
