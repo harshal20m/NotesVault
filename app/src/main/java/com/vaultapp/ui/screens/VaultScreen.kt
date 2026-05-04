@@ -1,5 +1,6 @@
 package com.vaultapp.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
@@ -28,6 +29,7 @@ import com.vaultapp.data.model.NoteColor
 import com.vaultapp.ui.components.ToastManager
 import com.vaultapp.ui.theme.vaultColors
 import com.vaultapp.ui.viewmodel.VaultViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -43,6 +45,7 @@ fun VaultScreen(
     val searchQ   by viewModel.searchQuery.collectAsStateWithLifecycle()
     var selCat    by remember { mutableStateOf<PasswordCategory?>(null) }
     var selectedPassword by remember { mutableStateOf<PasswordEntry?>(null) }
+    val deletingPasswordIds = remember { mutableStateListOf<Long>() }
     // FIX: grid view for vault - 2 cols
     var useGrid   by remember { mutableStateOf(true) }
     val scope     = rememberCoroutineScope()
@@ -136,18 +139,24 @@ fun VaultScreen(
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(display) { pw ->
-                            PasswordGridCard(
-                                entry   = pw,
-                                vc      = vc,
-                                categoryColor = categoryColorFor(pw, vc),
-                                onReveal = { viewModel.getDecryptedPassword(pw.id).orEmpty() },
-                                onCopy  = { scope.launch {
-                                    val plain = viewModel.getDecryptedPassword(pw.id) ?: ""
-                                    clipboard.setText(AnnotatedString(plain))
-                                }},
-                                onClick = { onPasswordClick(pw.id) },
-                                onLongClick = { selectedPassword = pw }
-                            )
+                            AnimatedVisibility(
+                                visible = !deletingPasswordIds.contains(pw.id),
+                                enter = fadeIn(),
+                                exit = fadeOut() + scaleOut(targetScale = 0.6f)
+                            ) {
+                                PasswordGridCard(
+                                    entry   = pw,
+                                    vc      = vc,
+                                    categoryColor = categoryColorFor(pw, vc),
+                                    onReveal = { viewModel.getDecryptedPassword(pw.id).orEmpty() },
+                                    onCopy  = { scope.launch {
+                                        val plain = viewModel.getDecryptedPassword(pw.id) ?: ""
+                                        clipboard.setText(AnnotatedString(plain))
+                                    }},
+                                    onClick = { onPasswordClick(pw.id) },
+                                    onLongClick = { selectedPassword = pw }
+                                )
+                            }
                         }
                     }
                 } else {
@@ -198,7 +207,12 @@ fun VaultScreen(
             dismissButton = {
                 Column(horizontalAlignment = Alignment.End) {
                     FilledTonalButton(onClick = {
-                        viewModel.deletePassword(pw)
+                        deletingPasswordIds.add(pw.id)
+                        scope.launch {
+                            delay(450)
+                            viewModel.deletePassword(pw)
+                            deletingPasswordIds.remove(pw.id)
+                        }
                         selectedPassword = null
                     }, colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.error.copy(.15f))) {
                         Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)

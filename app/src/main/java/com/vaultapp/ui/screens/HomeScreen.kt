@@ -1,5 +1,6 @@
 package com.vaultapp.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.staggeredgrid.*
@@ -30,6 +31,8 @@ import com.vaultapp.ui.theme.vaultColors
 import com.vaultapp.ui.viewmodel.HomeViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -48,6 +51,8 @@ fun HomeScreen(
     val passwordCount by viewModel.passwordCount.collectAsStateWithLifecycle()
     var selectedFilter by remember { mutableStateOf("All") }
     var selectedNote by remember { mutableStateOf<Note?>(null) }
+    val deletingNoteIds = remember { mutableStateListOf<Long>() }
+    val uiScope = rememberCoroutineScope()
     val filters = remember { listOf("All", "Notes", "Pinned", "Media", "Locked", "Archived") }
 
     val displayNotes = remember(notes, archivedNotes, selectedFilter) {
@@ -206,17 +211,33 @@ fun HomeScreen(
                         modifier              = Modifier.fillMaxSize()
                     ) {
                         items(displayNotes, key = { it.id }) { note ->
-                            NoteCard(
-                                note        = note,
-                                onClick     = { onNoteClick(note.id) },
-                                onLongClick = {
-                                    selectedNote = note
-                                }
-                            )
+                            AnimatedVisibility(
+                                visible = !deletingNoteIds.contains(note.id),
+                                enter = fadeIn(),
+                                exit = fadeOut() + scaleOut(targetScale = 0.6f)
+                            ) {
+                                NoteCard(
+                                    note        = note,
+                                    onClick     = { onNoteClick(note.id) },
+                                    onLongClick = {
+                                        selectedNote = note
+                                    }
+                                )
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+    fun avengersDeleteNote(noteId: Long) {
+        if (deletingNoteIds.contains(noteId)) return
+        deletingNoteIds.add(noteId)
+        uiScope.launch {
+            delay(450)
+            viewModel.deleteNote(noteId)
+            ToastManager.deleted()
+            deletingNoteIds.remove(noteId)
         }
     }
     selectedNote?.let { note ->
@@ -247,8 +268,7 @@ fun HomeScreen(
                         Text(if (note.isArchived) "📂 Unarchive note" else "📦 Archive note", color = vc.primary)
                     }
                     FilledTonalButton(onClick = {
-                        viewModel.deleteNote(note.id)
-                        ToastManager.deleted()
+                        avengersDeleteNote(note.id)
                         selectedNote = null
                     }, colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.error.copy(.15f))) {
                         Text("🗑 Delete note", color = MaterialTheme.colorScheme.error)
