@@ -2,7 +2,6 @@ package com.vaultapp.ui.viewmodel
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -108,8 +107,7 @@ class NoteEditViewModel @Inject constructor(private val repo: NoteRepository) : 
 // ── VaultViewModel ────────────────────────────────────────────────────────────
 @HiltViewModel
 class VaultViewModel @Inject constructor(
-    private val repo: PasswordRepository,
-    private val prefs: PreferencesManager
+    private val repo: PasswordRepository
 ) : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
@@ -118,9 +116,6 @@ class VaultViewModel @Inject constructor(
     val passwords: StateFlow<List<PasswordEntry>> = _searchQuery
         .flatMapLatest { q -> if (q.isEmpty()) repo.getAllPasswords() else repo.searchPasswords(q) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    val categoryColors = prefs.getCategoryColors()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
-
     fun onSearchQuery(q: String) { _searchQuery.value = q }
     fun toggleFavorite(id: Long, f: Boolean) = viewModelScope.launch { repo.setFavorite(id, f) }
     fun deletePassword(entry: PasswordEntry) = viewModelScope.launch { repo.deletePassword(entry) }
@@ -131,8 +126,7 @@ class VaultViewModel @Inject constructor(
 // ── PasswordEditViewModel ─────────────────────────────────────────────────────
 @HiltViewModel
 class PasswordEditViewModel @Inject constructor(
-    private val repo: PasswordRepository,
-    private val prefs: PreferencesManager
+    private val repo: PasswordRepository
 ) : ViewModel() {
     private val _entry = MutableStateFlow<PasswordEntry?>(null)
     val entry: StateFlow<PasswordEntry?> = _entry
@@ -143,16 +137,8 @@ class PasswordEditViewModel @Inject constructor(
     var website  by mutableStateOf("")
     var category by mutableStateOf(PasswordCategory.OTHER)
     var notes    by mutableStateOf("")
-    var selectedCategoryColorHex by mutableStateOf("")
+    var selectedCardColorHex by mutableStateOf("")
     var passwordHistory by mutableStateOf(listOf<PasswordHistoryItem>())
-
-    init {
-        viewModelScope.launch {
-            snapshotFlow { category }.flatMapLatest { prefs.getCategoryColor(it) }.collect {
-                selectedCategoryColorHex = it
-            }
-        }
-    }
 
     fun loadEntry(id: Long) = viewModelScope.launch {
         if (id == -1L) { _entry.value = null; return@launch }
@@ -163,6 +149,7 @@ class PasswordEditViewModel @Inject constructor(
             password = runCatching { CryptoManager.decrypt(e.encryptedPassword) }.getOrDefault("")
             website  = e.website
             category = e.category
+            selectedCardColorHex = e.cardColorHex
             notes    = e.notes
         }
     }
@@ -185,16 +172,15 @@ class PasswordEditViewModel @Inject constructor(
         val e = PasswordEntry(
             id = _entry.value?.id ?: 0L,
             title = title, username = username, encryptedPassword = password,
-            website = website, category = category, notes = notes,
+            website = website, category = category, cardColorHex = selectedCardColorHex.trim(), notes = notes,
             passwordStrength = computeStrength(password)
         )
         if (e.id == 0L) repo.savePassword(e) else repo.updatePassword(e)
-        prefs.setCategoryColor(category, selectedCategoryColorHex.trim())
         onDone()
     }
 
-    fun setSelectedCategoryColor(hex: String) {
-        selectedCategoryColorHex = hex
+    fun setSelectedCardColor(hex: String) {
+        selectedCardColorHex = hex
     }
 
     fun recordCurrentPasswordInHistory() {

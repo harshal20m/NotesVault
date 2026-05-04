@@ -378,7 +378,7 @@ fun SettingsScreen(
             onDismissRequest = { showDeveloperDialog = false },
             containerColor = vc.surface,
             title = { Text("About Developer 👩‍💻", color = vc.onBackground) },
-            text = { Text("Hey! I made this app with lots of care, calm nights, and tiny happy cameos 🐾✨\n\nI love building secure, beautiful tools that feel cozy and useful every day.\n\nThanks for using Vault 💖", color = vc.onSurface) },
+            text = { Text("Harshal Mali @IBM\nOpen source lover 🚀\n\nExplore me:\n• Instagram: @20harshal\n• GitHub: @harshal20m\n\nThanks for using Vault 💖", color = vc.onSurface) },
             confirmButton = { TextButton(onClick = { showDeveloperDialog = false }) { Text("Aww, nice!", color = vc.primary) } }
         )
     }
