@@ -1,10 +1,8 @@
 package com.vaultapp.ui.theme
-
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import com.vaultapp.data.model.AppTheme
-
 data class VaultColors(
     val background: Color, val surface: Color, val surfaceVariant: Color,
     val primary: Color, val primaryContainer: Color, val onPrimary: Color,
@@ -12,47 +10,128 @@ data class VaultColors(
     val noteCard1: Color, val noteCard2: Color, val noteCard3: Color, val noteCard4: Color,
     val noteCard5: Color, val noteCard6: Color, val noteCard7: Color, val noteCard8: Color
 )
-
 val LocalVaultColors = staticCompositionLocalOf { midnight() }
-
-// Extension on M3 MaterialTheme (no name clash since this is an extension property)
-val MaterialTheme.vaultColors: VaultColors @Composable get() = LocalVaultColors.current
-
+val MaterialTheme.vaultColors: VaultColors
+    @Composable get() = LocalVaultColors.current
 @Composable
 fun VaultTheme(appTheme: AppTheme = AppTheme.MIDNIGHT, content: @Composable () -> Unit) {
     val vc = appTheme.toVaultColors()
-    val isLight = appTheme == AppTheme.CLOUD
-    val cs = if (isLight) lightColorScheme(primary = vc.primary, background = vc.background, surface = vc.surface,
-        onPrimary = vc.onPrimary, onBackground = vc.onBackground, onSurface = vc.onSurface,
-        surfaceVariant = vc.surfaceVariant, outline = vc.outline)
-    else darkColorScheme(primary = vc.primary, background = vc.background, surface = vc.surface,
-        onPrimary = vc.onPrimary, onBackground = vc.onBackground, onSurface = vc.onSurface,
-        surfaceVariant = vc.surfaceVariant, outline = vc.outline)
+    val cs = lightColorScheme(
+        primary = vc.primary,
+        primaryContainer = vc.primaryContainer,
+        background = vc.background,
+        surface = vc.surface,
+        surfaceVariant = vc.surfaceVariant,
+        onPrimary = vc.onPrimary,
+        onBackground = vc.onBackground,
+        onSurface = vc.onSurface,
+        onSurfaceVariant = vc.onSurfaceVariant,
+        outline = vc.outline
+    )
     CompositionLocalProvider(LocalVaultColors provides vc) {
-        MaterialTheme(colorScheme = cs, typography = VaultTypography, content = content)
+        MaterialTheme(
+            colorScheme = cs,
+            typography = VaultTypography,
+            content = content
+        )
     }
 }
-
 fun AppTheme.toVaultColors() = when (this) {
-    AppTheme.MIDNIGHT -> midnight(); AppTheme.CLOUD    -> cloud()
-    AppTheme.FOREST   -> forest();   AppTheme.ROSE     -> rose()
-    AppTheme.OCEAN    -> ocean();    AppTheme.AMBER    -> amber()
-    AppTheme.VIOLET   -> violet();   AppTheme.ABYSS    -> abyss()
-    AppTheme.MONO     -> mono();     AppTheme.SUNSET   -> sunset()
-    AppTheme.CHERRY   -> cherry();   AppTheme.ARCTIC   -> arctic()
+    AppTheme.MIDNIGHT -> midnight()
+    AppTheme.CLOUD    -> cloud()
+    AppTheme.FOREST   -> forest()
+    AppTheme.ROSE     -> rose()
+    AppTheme.OCEAN    -> ocean()
+    AppTheme.AMBER    -> amber()
+    AppTheme.VIOLET   -> violet()
+    AppTheme.ABYSS    -> abyss()
+    AppTheme.MONO     -> mono()
+    AppTheme.SUNSET   -> sunset()
+    AppTheme.CHERRY   -> cherry()
+    AppTheme.ARCTIC   -> arctic()
 }
-
 private fun c(hex: String) = Color(android.graphics.Color.parseColor(hex))
-
-fun midnight() = VaultColors(c("#0F0F14"),c("#1E1E2E"),c("#2A2A3E"),c("#7C6AF5"),c("#2A1A50"),Color.White,c("#E8E8F0"),c("#C8C8E0"),c("#8888AA"),c("#3A3A50"),c("#2D2460"),c("#0D3D30"),c("#3D1A2E"),c("#3A2300"),c("#0D2A45"),c("#1A3010"),c("#3A1010"),c("#1A1A40"))
-fun cloud()    = VaultColors(c("#F8F8FF"),c("#FFFFFF"),c("#F0F0F8"),c("#6B5CE7"),c("#EDEAFF"),c("#0F0F14"),c("#1A1A2E"),c("#2A2A3E"),c("#6B6B8A"),c("#D0D0E0"),c("#EDE9FF"),c("#E0F4EE"),c("#FFE8F0"),c("#FFF3E0"),c("#E3F2FD"),c("#E8F5E9"),c("#FFEBEE"),c("#F3E8FF"))
-fun forest()   = VaultColors(c("#0A1F18"),c("#0D3D30"),c("#1A4A3A"),c("#1D9E75"),c("#0A2A20"),Color.White,c("#B0E8D0"),c("#90D0B8"),c("#6AAA90"),c("#2A5040"),c("#0D3D30"),c("#1A4020"),c("#2A3010"),c("#1A2A10"),c("#0A2A20"),c("#203A18"),c("#0F3020"),c("#183020"))
-fun rose()     = VaultColors(c("#1A0610"),c("#3D1A2E"),c("#4A2038"),c("#D4537E"),c("#3D1A2E"),Color.White,c("#FFD0E0"),c("#EEB8CC"),c("#CC90A8"),c("#5A2A3E"),c("#3D1A2E"),c("#2A1020"),c("#3A0818"),c("#2A0A14"),c("#1A0810"),c("#300A1A"),c("#200810"),c("#401428"))
-fun ocean()    = VaultColors(c("#060D1A"),c("#0D2A45"),c("#143055"),c("#378ADD"),c("#0A2040"),Color.White,c("#B8D8F8"),c("#90C0F0"),c("#6898C8"),c("#1A3A58"),c("#0D2A45"),c("#0A2030"),c("#102838"),c("#0A1828"),c("#081520"),c("#0F2230"),c("#0A1A28"),c("#102840"))
-fun amber()    = VaultColors(c("#1A1000"),c("#3A2300"),c("#4A2E00"),c("#BA7517"),c("#3A2300"),Color.White,c("#FFE0A0"),c("#EEC880"),c("#CCA060"),c("#5A3800"),c("#3A2300"),c("#2A1800"),c("#3A1800"),c("#281000"),c("#1A0800"),c("#301A00"),c("#200E00"),c("#402800"))
-fun violet()   = VaultColors(c("#100A20"),c("#2A1A50"),c("#361F65"),c("#9B59B6"),c("#2A1A50"),Color.White,c("#D8C0FF"),c("#C0A0F0"),c("#9870D0"),c("#3E2260"),c("#2A1A50"),c("#1E1040"),c("#301848"),c("#200E38"),c("#180A28"),c("#281440"),c("#1A0838"),c("#381C58"))
-fun abyss()    = VaultColors(c("#030810"),c("#001A2A"),c("#002038"),c("#1D6FA4"),c("#001A30"),Color.White,c("#90C8E8"),c("#70A8CC"),c("#5088A8"),c("#002840"),c("#001A2A"),c("#001018"),c("#001820"),c("#000E18"),c("#000810"),c("#001418"),c("#000A14"),c("#001C28"))
-fun mono()     = VaultColors(c("#0A0A0A"),c("#1A1A1A"),c("#242424"),c("#888780"),c("#2A2A2A"),Color.White,c("#E0E0E0"),c("#C0C0C0"),c("#909090"),c("#3A3A3A"),c("#1E1E1E"),c("#242424"),c("#1A1A1A"),c("#202020"),c("#181818"),c("#222222"),c("#161616"),c("#262626"))
-fun sunset()   = VaultColors(c("#1A0800"),c("#3A1800"),c("#4A2010"),c("#E87040"),c("#3A1800"),Color.White,c("#FFD8B8"),c("#EEC098"),c("#CC9878"),c("#5A2A10"),c("#3A1800"),c("#2A1000"),c("#3A0C00"),c("#280800"),c("#1A0600"),c("#300E00"),c("#200A00"),c("#402010"))
-fun cherry()   = VaultColors(c("#1A0008"),c("#3A0018"),c("#4A0820"),c("#E05070"),c("#3A0018"),Color.White,c("#FFB8C8"),c("#EE98A8"),c("#CC7888"),c("#5A1028"),c("#3A0018"),c("#2A0010"),c("#3A0008"),c("#280008"),c("#1A0006"),c("#300010"),c("#200008"),c("#400018"))
-fun arctic()   = VaultColors(c("#0A1218"),c("#152030"),c("#1E2E40"),c("#4DC8E0"),c("#0A1C28"),c("#001820"),c("#B8E8F8"),c("#90D0E8"),c("#68B8D0"),c("#1E3048"),c("#152030"),c("#0A1A28"),c("#101E30"),c("#081420"),c("#060E18"),c("#0E1C28"),c("#080C18"),c("#162438"))
+fun midnight() = VaultColors(
+    c("#F7F5FF"), c("#FFFFFF"), c("#EFEAFE"),
+    c("#7C6AF5"), c("#E6E0FF"), Color.White,
+    c("#1A1A24"), c("#2A2A38"), c("#6A6A80"), c("#CFCFE3"),
+    c("#EEE9FF"), c("#E6F7F1"), c("#FDEAF1"), c("#FFF4E5"),
+    c("#E8F2FF"), c("#EDF8E7"), c("#FDECEC"), c("#F1EEFF")
+)
+fun cloud() = VaultColors(
+    c("#FAFAFF"), c("#FFFFFF"), c("#F3F4FA"),
+    c("#6B5CE7"), c("#EAE7FF"), Color.White,
+    c("#1C1C28"), c("#2C2C3A"), c("#70708A"), c("#D6D8E5"),
+    c("#EFEAFF"), c("#E8F7F0"), c("#FFECEF"), c("#FFF6E8"),
+    c("#EAF4FF"), c("#EDF8EE"), c("#FFF0F0"), c("#F5EEFF")
+)
+fun forest() = VaultColors(
+    c("#F4FBF7"), c("#FFFFFF"), c("#E8F5EC"),
+    c("#1D9E75"), c("#D8F3E8"), Color.White,
+    c("#16241D"), c("#24342B"), c("#5F7A6C"), c("#C7DDD2"),
+    c("#DDF4EA"), c("#EAF8E8"), c("#F3F2E4"), c("#EEF6E5"),
+    c("#E2F4EC"), c("#E8F7E1"), c("#EDF8EE"), c("#E6F3EA")
+)
+fun rose() = VaultColors(
+    c("#FFF7FA"), c("#FFFFFF"), c("#FDECF2"),
+    c("#D4537E"), c("#FFDCE7"), Color.White,
+    c("#2B1820"), c("#3A2530"), c("#8A6675"), c("#E7C8D3"),
+    c("#FFE5EC"), c("#FFF0F4"), c("#FFDCE7"), c("#FFF1F3"),
+    c("#FDEAF1"), c("#FFF4F7"), c("#FFE8EE"), c("#FCEEF5")
+)
+fun ocean() = VaultColors(
+    c("#F4F9FF"), c("#FFFFFF"), c("#E8F2FC"),
+    c("#378ADD"), c("#D9EBFF"), Color.White,
+    c("#162434"), c("#223548"), c("#647A90"), c("#C8D8E8"),
+    c("#E3F0FF"), c("#EDF7FF"), c("#EEF4FA"), c("#F5F8FC"),
+    c("#DDEEFF"), c("#EEF7FB"), c("#EDF4FA"), c("#E8F1FF")
+)
+fun amber() = VaultColors(
+    c("#FFF9F2"), c("#FFFFFF"), c("#FEF1DE"),
+    c("#BA7517"), c("#FBE3BC"), Color.White,
+    c("#2C2112"), c("#3C2E1C"), c("#8B7352"), c("#E6D3B5"),
+    c("#FFF0D9"), c("#FFF7EB"), c("#FFF1E2"), c("#FFF4D8"),
+    c("#FFF8EE"), c("#FFF6E5"), c("#FFF0E8"), c("#FFF7EC")
+)
+fun violet() = VaultColors(
+    c("#F8F5FF"), c("#FFFFFF"), c("#EFE8FC"),
+    c("#9B59B6"), c("#E9D8F5"), Color.White,
+    c("#241A2C"), c("#33243D"), c("#7B6686"), c("#D8C8E2"),
+    c("#F0E5FA"), c("#F6F0FC"), c("#F3E8FA"), c("#F8F1FC"),
+    c("#EFEAFF"), c("#F5EEFA"), c("#F7F0FB"), c("#F2EAFE")
+)
+fun abyss() = VaultColors(
+    c("#F2FAFD"), c("#FFFFFF"), c("#E3F2F8"),
+    c("#1D6FA4"), c("#D5EAF5"), Color.White,
+    c("#132430"), c("#203542"), c("#607887"), c("#C2D7E2"),
+    c("#DDEFFA"), c("#EAF6FB"), c("#EEF6F8"), c("#F2F8FA"),
+    c("#E3F4FB"), c("#EDF7F8"), c("#EFF6F9"), c("#E8F1F6")
+)
+fun mono() = VaultColors(
+    c("#FAFAFA"), c("#FFFFFF"), c("#F1F1F1"),
+    c("#888780"), c("#E5E5E5"), Color.White,
+    c("#1E1E1E"), c("#2C2C2C"), c("#6F6F6F"), c("#D0D0D0"),
+    c("#F2F2F2"), c("#F7F7F7"), c("#EFEFEF"), c("#F5F5F5"),
+    c("#ECECEC"), c("#F3F3F3"), c("#EEEEEE"), c("#F8F8F8")
+)
+fun sunset() = VaultColors(
+    c("#FFF7F2"), c("#FFFFFF"), c("#FDECE3"),
+    c("#E87040"), c("#FFDCCF"), Color.White,
+    c("#2E1E18"), c("#3D2A22"), c("#8C6B60"), c("#E7CBBE"),
+    c("#FFE8DD"), c("#FFF1EA"), c("#FFE4DA"), c("#FFF0E5"),
+    c("#FFF5EF"), c("#FFF2E8"), c("#FFEDE7"), c("#FFF3EC")
+)
+fun cherry() = VaultColors(
+    c("#FFF5F7"), c("#FFFFFF"), c("#FDE8ED"),
+    c("#E05070"), c("#FFD9E2"), Color.White,
+    c("#2D1820"), c("#3B2430"), c("#8C6470"), c("#E6C7D0"),
+    c("#FFE4EA"), c("#FFF0F3"), c("#FFDCE4"), c("#FFF1F4"),
+    c("#FDECEF"), c("#FFF4F6"), c("#FFE8ED"), c("#FCEEF2")
+)
+fun arctic() = VaultColors(
+    c("#F3FBFD"), c("#FFFFFF"), c("#E5F4F8"),
+    c("#4DC8E0"), c("#D6F3F8"), c("#08313A"),
+    c("#16242A"), c("#22353D"), c("#66808A"), c("#C6DDE3"),
+    c("#DFF7FB"), c("#ECF9FB"), c("#EEF7FA"), c("#F3FAFB"),
+    c("#E4F7FB"), c("#EEF9FA"), c("#F0F8FA"), c("#E8F4F8")
+)

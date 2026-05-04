@@ -59,6 +59,7 @@ fun HomeScreen(
 
     Scaffold(
         containerColor = vc.background,
+        contentWindowInsets = WindowInsets(0),
         floatingActionButton = {
             FloatingActionButton(
                 onClick          = onAddNote,
