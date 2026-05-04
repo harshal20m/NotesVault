@@ -22,6 +22,7 @@ data class Note(
     val mediaUris: List<String> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
+    val isArchived: Boolean = false,
     val isDeleted: Boolean = false,
     val reminderAt: Long? = null
 )

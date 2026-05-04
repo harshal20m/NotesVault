@@ -3,6 +3,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +40,7 @@ import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Update
+import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -52,6 +54,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -74,6 +78,7 @@ import com.vaultapp.ui.components.ToastManager
 import com.vaultapp.ui.theme.toVaultColors
 import com.vaultapp.ui.theme.vaultColors
 import com.vaultapp.ui.viewmodel.SettingsViewModel
+import com.vaultapp.util.CryptoManager
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -90,7 +95,16 @@ fun SettingsScreen(
     val lockTimeout by viewModel.lockTimeout.collectAsStateWithLifecycle()
     val currentTheme by viewModel.appTheme.collectAsStateWithLifecycle()
     val recovEmail by viewModel.recoveryEmail.collectAsStateWithLifecycle()
+    val pinHash by viewModel.pinHash.collectAsStateWithLifecycle()
     var showTimeoutPicker by remember { mutableStateOf(false) }
+    var showPinDialog by remember { mutableStateOf(false) }
+    var showRecoveryEmailDialog by remember { mutableStateOf(false) }
+    var showDeveloperDialog by remember { mutableStateOf(false) }
+    var emailDraft by remember(recovEmail) { mutableStateOf(recovEmail) }
+    var oldPin by remember { mutableStateOf("") }
+    var newPin by remember { mutableStateOf("") }
+    var confirmPin by remember { mutableStateOf("") }
+    var pinError by remember { mutableStateOf("") }
     Scaffold(
         containerColor = vc.background,
         topBar = {
@@ -130,7 +144,11 @@ fun SettingsScreen(
                     title = "Change PIN",
                     subtitle = "Update your unlock PIN"
                 ) {
-                    ToastManager.info("PIN change coming soon")
+                    oldPin = ""
+                    newPin = ""
+                    confirmPin = ""
+                    pinError = ""
+                    showPinDialog = true
                 }
                 SettingsSwitchRow(
                     icon = Icons.Outlined.Fingerprint,
@@ -153,6 +171,8 @@ fun SettingsScreen(
                     title = "Recovery email",
                     subtitle = recovEmail.ifEmpty { "Not set — tap to add" }
                 ) {
+                    emailDraft = recovEmail
+                    showRecoveryEmailDialog = true
                 }
             }
             SettingsSection("Updates") {
@@ -226,12 +246,21 @@ fun SettingsScreen(
                     title = "Version",
                     subtitle = "1.0.0 · Kotlin + Compose"
                 ) {
+                    ToastManager.info("You are on version 1.0.0")
+                }
+                SettingsRow(
+                    icon = Icons.Outlined.Face,
+                    title = "About Developer",
+                    subtitle = "Built with care, coffee and cute vibes ✨"
+                ) {
+                    showDeveloperDialog = true
                 }
                 SettingsRow(
                     icon = Icons.Outlined.PrivacyTip,
                     title = "Privacy",
                     subtitle = "Fully offline · AES-256-GCM · No telemetry"
                 ) {
+                    ToastManager.info("Your data stays on this device and is never uploaded.")
                 }
             }
             Spacer(modifier = Modifier.height(100.dp))
@@ -283,6 +312,74 @@ fun SettingsScreen(
                 }
             },
             confirmButton = {}
+        )
+    }
+    if (showRecoveryEmailDialog) {
+        AlertDialog(
+            onDismissRequest = { showRecoveryEmailDialog = false },
+            containerColor = vc.surface,
+            title = { Text("Recovery email", color = vc.onBackground) },
+            text = {
+                OutlinedTextField(
+                    value = emailDraft,
+                    onValueChange = { emailDraft = it },
+                    singleLine = true,
+                    label = { Text("Email") }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.setRecoveryEmail(emailDraft.trim())
+                    showRecoveryEmailDialog = false
+                    ToastManager.success("Recovery email updated")
+                }) { Text("Save", color = vc.primary) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRecoveryEmailDialog = false }) {
+                    Text("Cancel", color = vc.onSurfaceVariant)
+                }
+            }
+        )
+    }
+    if (showPinDialog) {
+        AlertDialog(
+            onDismissRequest = { showPinDialog = false },
+            containerColor = vc.surface,
+            title = { Text("Change PIN", color = vc.onBackground) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(value = oldPin, onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) oldPin = it }, label = { Text("Current PIN") }, singleLine = true)
+                    OutlinedTextField(value = newPin, onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) newPin = it }, label = { Text("New PIN") }, singleLine = true)
+                    OutlinedTextField(value = confirmPin, onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) confirmPin = it }, label = { Text("Confirm new PIN") }, singleLine = true)
+                    if (pinError.isNotEmpty()) Text(pinError, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    when {
+                        oldPin.length != 6 || newPin.length != 6 || confirmPin.length != 6 -> pinError = "PIN must be 6 digits"
+                        pinHash != null && CryptoManager.hashPin(oldPin) != pinHash -> pinError = "Current PIN is incorrect"
+                        newPin != confirmPin -> pinError = "New PINs do not match"
+                        else -> {
+                            viewModel.changePin(newPin)
+                            showPinDialog = false
+                            ToastManager.success("PIN changed successfully")
+                        }
+                    }
+                }) { Text("Save", color = vc.primary) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPinDialog = false }) { Text("Cancel", color = vc.onSurfaceVariant) }
+            }
+        )
+    }
+    if (showDeveloperDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeveloperDialog = false },
+            containerColor = vc.surface,
+            title = { Text("About Developer 👩‍💻", color = vc.onBackground) },
+            text = { Text("Hey! I made this app with lots of care, calm nights, and tiny happy cameos 🐾✨\n\nI love building secure, beautiful tools that feel cozy and useful every day.\n\nThanks for using Vault 💖", color = vc.onSurface) },
+            confirmButton = { TextButton(onClick = { showDeveloperDialog = false }) { Text("Aww, nice!", color = vc.primary) } }
         )
     }
 }
@@ -433,6 +530,7 @@ fun ThemesScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val vc = MaterialTheme.vaultColors
+    val isDarkMode = isSystemInDarkTheme()
     val currentTheme by viewModel.appTheme.collectAsStateWithLifecycle()
     Scaffold(
         containerColor = vc.background,
@@ -480,8 +578,12 @@ fun ThemesScreen(
                     theme = theme,
                     isSelected = theme == currentTheme
                 ) {
-                    viewModel.setTheme(theme)
-                    ToastManager.success("${theme.displayName} theme applied")
+                    if (isDarkMode) {
+                        ToastManager.warning("Theme switching is disabled in dark mode. Turn off dark mode, then switch theme.")
+                    } else {
+                        viewModel.setTheme(theme)
+                        ToastManager.success("${theme.displayName} theme applied")
+                    }
                 }
             }
         }
