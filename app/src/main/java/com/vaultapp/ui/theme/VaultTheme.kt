@@ -68,30 +68,24 @@ fun AppTheme.toVaultColors(isDarkMode: Boolean = false) = if (isDarkMode) toDark
     AppTheme.ARCTIC   -> arctic()
 }
 private fun AppTheme.toDarkVaultColors() = VaultColors(
-    background = c(backgroundHex),
-    surface = c(surfaceHex),
-    surfaceVariant = lighten(c(surfaceHex), 0.12f),
-    primary = c(primaryHex),
-    primaryContainer = lighten(c(primaryHex), 0.18f),
-    onPrimary = Color.White,
-    onBackground = c("#F5F5F7"),
-    onSurface = c("#ECECF1"),
-    onSurfaceVariant = c("#B2B2C0"),
-    outline = c("#3A3A4A"),
-    noteCard1 = lighten(c(surfaceHex), 0.05f),
-    noteCard2 = lighten(c(surfaceHex), 0.08f),
-    noteCard3 = lighten(c(surfaceHex), 0.11f),
-    noteCard4 = lighten(c(surfaceHex), 0.14f),
-    noteCard5 = lighten(c(surfaceHex), 0.17f),
-    noteCard6 = lighten(c(surfaceHex), 0.20f),
-    noteCard7 = lighten(c(surfaceHex), 0.23f),
-    noteCard8 = lighten(c(surfaceHex), 0.26f)
-)
-private fun lighten(color: Color, amount: Float): Color = Color(
-    red = color.red + (1f - color.red) * amount,
-    green = color.green + (1f - color.green) * amount,
-    blue = color.blue + (1f - color.blue) * amount,
-    alpha = color.alpha
+    background = Color.Black,
+    surface = Color.Black,
+    surfaceVariant = c("#111111"),
+    primary = Color.White,
+    primaryContainer = c("#1A1A1A"),
+    onPrimary = Color.Black,
+    onBackground = Color.White,
+    onSurface = Color.White,
+    onSurfaceVariant = c("#D0D0D0"),
+    outline = c("#2A2A2A"),
+    noteCard1 = Color.Black,
+    noteCard2 = Color.Black,
+    noteCard3 = Color.Black,
+    noteCard4 = Color.Black,
+    noteCard5 = Color.Black,
+    noteCard6 = Color.Black,
+    noteCard7 = Color.Black,
+    noteCard8 = Color.Black
 )
 private fun c(hex: String) = Color(android.graphics.Color.parseColor(hex))
 fun midnight() = VaultColors(
