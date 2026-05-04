@@ -112,13 +112,6 @@ fun VaultScreen(
                         border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selCat == cat, selectedBorderColor = Color.Transparent, borderColor = vc.outline))
                 }
             }
-            var showCategoryStyle by remember { mutableStateOf(false) }
-            TextButton(onClick = { showCategoryStyle = !showCategoryStyle }, modifier = Modifier.padding(horizontal = 8.dp)) {
-                Text(if (showCategoryStyle) "Hide category colors" else "Manage category colors", color = vc.primary, fontSize = 12.sp)
-            }
-            if (showCategoryStyle) {
-                Text("Category colors are auto-applied (leave blank = default).", color = vc.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 14.dp))
-            }
 
             if (display.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -190,20 +183,28 @@ fun VaultScreen(
     selectedPassword?.let { pw ->
         AlertDialog(
             onDismissRequest = { selectedPassword = null },
-            title = { Text("Password actions") },
-            text = { Text(pw.title) },
+            title = { Text("🔐 Password Actions", color = vc.onBackground) },
+            text = { Text("Choose what you want to do with “${pw.title}”.", color = vc.onSurfaceVariant) },
             confirmButton = {
-                TextButton(onClick = {
+                FilledTonalButton(onClick = {
                     viewModel.toggleFavorite(pw.id, !pw.isFavorite)
                     selectedPassword = null
-                }) { Text(if (pw.isFavorite) "Unpin" else "Pin") }
+                }, colors = ButtonDefaults.filledTonalButtonColors(containerColor = vc.primaryContainer)) {
+                    Icon(Icons.Default.PushPin, null, tint = vc.primary)
+                    Spacer(Modifier.width(6.dp))
+                    Text(if (pw.isFavorite) "Unpin" else "Pin", color = vc.primary)
+                }
             },
             dismissButton = {
-                Row {
-                    TextButton(onClick = {
+                Column(horizontalAlignment = Alignment.End) {
+                    FilledTonalButton(onClick = {
                         viewModel.deletePassword(pw)
                         selectedPassword = null
-                    }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                    }, colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.error.copy(.15f))) {
+                        Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
                     TextButton(onClick = { selectedPassword = null }) { Text("Cancel") }
                 }
             }
@@ -212,7 +213,6 @@ fun VaultScreen(
 }
 
 // ── Grid card ──────────────────────────────────────────────────────────────────
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors, categoryColor: Color, onReveal: suspend () -> String, onCopy: () -> Unit, onClick: () -> Unit, onLongClick: () -> Unit) {
     var revealed by remember { mutableStateOf(false) }
@@ -273,7 +273,6 @@ private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.Vau
 }
 
 // ── List card ──────────────────────────────────────────────────────────────────
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PasswordListCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors, categoryColor: Color, onReveal: suspend () -> String, onCopy: () -> Unit, onClick: () -> Unit, onLongClick: () -> Unit) {
     var revealed by remember { mutableStateOf(false) }

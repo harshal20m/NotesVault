@@ -223,15 +223,18 @@ fun HomeScreen(
         AlertDialog(
             onDismissRequest = { selectedNote = null },
             containerColor = vc.surface,
-            title = { Text("Note options", color = vc.onBackground) },
+            title = { Text("📝 Note Actions", color = vc.onBackground) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TextButton(onClick = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FilledTonalButton(
+                        onClick = {
                         viewModel.togglePin(note.id, !note.isPinned)
                         if (note.isPinned) ToastManager.unpinned() else ToastManager.pinned()
                         selectedNote = null
-                    }) { Text(if (note.isPinned) "Unpin" else "Pin", color = vc.primary) }
-                    TextButton(onClick = {
+                    },
+                        colors = ButtonDefaults.filledTonalButtonColors(containerColor = vc.primaryContainer)
+                    ) { Text(if (note.isPinned) "📌 Unpin note" else "📌 Pin note", color = vc.primary) }
+                    FilledTonalButton(onClick = {
                         if (note.isArchived) {
                             viewModel.unarchiveNote(note.id)
                             ToastManager.info("Note unarchived")
@@ -240,12 +243,16 @@ fun HomeScreen(
                             ToastManager.info("Note archived")
                         }
                         selectedNote = null
-                    }) { Text(if (note.isArchived) "Unarchive" else "Archive", color = vc.primary) }
-                    TextButton(onClick = {
+                    }, colors = ButtonDefaults.filledTonalButtonColors(containerColor = vc.primaryContainer)) {
+                        Text(if (note.isArchived) "📂 Unarchive note" else "📦 Archive note", color = vc.primary)
+                    }
+                    FilledTonalButton(onClick = {
                         viewModel.deleteNote(note.id)
                         ToastManager.deleted()
                         selectedNote = null
-                    }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                    }, colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.error.copy(.15f))) {
+                        Text("🗑 Delete note", color = MaterialTheme.colorScheme.error)
+                    }
                 }
             },
             confirmButton = {},

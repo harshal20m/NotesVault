@@ -40,7 +40,7 @@ fun LockScreen(
     val vc     = MaterialTheme.vaultColors
     val ctx    = LocalContext.current
     val haptic = LocalHapticFeedback.current
-    val useBio by viewModel.useBiometrics.collectAsStateWithLifecycle(true)
+    val useBio by viewModel.useBiometrics.collectAsStateWithLifecycle(false)
 
     var pin        by remember { mutableStateOf("") }
     var errorShake by remember { mutableStateOf(false) }
@@ -71,7 +71,7 @@ fun LockScreen(
         )
     }
 
-    LaunchedEffect(Unit) { if (useBio) tryBiometric() }
+    LaunchedEffect(useBio) { if (useBio) tryBiometric() }
 
     Box(modifier = Modifier.fillMaxSize().background(vc.background), contentAlignment = Alignment.Center) {
             Column(

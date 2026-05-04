@@ -5,6 +5,7 @@ import android.app.Application
 import android.os.Bundle
 import com.vaultapp.data.local.PreferencesManager
 import com.vaultapp.data.model.LockTimeout
+import com.vaultapp.ui.components.ToastManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -34,6 +35,11 @@ class LockManager @Inject constructor(
             val timeout = prefs.lockTimeout.first()
             val elapsed = System.currentTimeMillis() - backgroundedAt
             if (timeout == LockTimeout.IMMEDIATELY || elapsed >= timeout.millis) {
+                for (i in 5 downTo 1) {
+                    ToastManager.info("$i")
+                    delay(1000)
+                }
+                ToastManager.info("Locked")
                 lock()
                 // Navigate to lock screen — handled by observing isLocked in MainActivity
             }
