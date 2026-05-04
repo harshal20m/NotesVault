@@ -213,6 +213,7 @@ fun VaultScreen(
 }
 
 // ── Grid card ──────────────────────────────────────────────────────────────────
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors, categoryColor: Color, onReveal: suspend () -> String, onCopy: () -> Unit, onClick: () -> Unit, onLongClick: () -> Unit) {
     var revealed by remember { mutableStateOf(false) }
@@ -269,6 +270,7 @@ private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.Vau
 }
 
 // ── List card ──────────────────────────────────────────────────────────────────
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PasswordListCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors, categoryColor: Color, onReveal: suspend () -> String, onCopy: () -> Unit, onClick: () -> Unit, onLongClick: () -> Unit) {
     var revealed by remember { mutableStateOf(false) }
@@ -312,12 +314,12 @@ private fun categoryColorFor(
         runCatching { return Color(android.graphics.Color.parseColor(hex)) }
     }
     return when (category) {
-    PasswordCategory.SOCIAL -> vc.noteCard1
-    PasswordCategory.FINANCE -> vc.noteCard4
-    PasswordCategory.ENTERTAINMENT -> vc.noteCard3
-    PasswordCategory.WORK -> vc.noteCard5
-    PasswordCategory.SHOPPING -> vc.noteCard2
-    PasswordCategory.OTHER -> vc.surface
+    PasswordCategory.SOCIAL -> Color(0xFFFCE4EC)
+    PasswordCategory.FINANCE -> Color(0xFFE8F5E9)
+    PasswordCategory.ENTERTAINMENT -> Color(0xFFE3F2FD)
+    PasswordCategory.WORK -> Color(0xFFEDE7F6)
+    PasswordCategory.SHOPPING -> Color(0xFFFFF8E1)
+    PasswordCategory.OTHER -> Color(0xFFF5F5F5)
 }
 }
 
