@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import com.vaultapp.data.model.AppTheme
 import com.vaultapp.data.model.LockTimeout
+import com.vaultapp.data.model.PasswordCategory
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -68,4 +69,24 @@ class PreferencesManager @Inject constructor(@ApplicationContext private val con
     suspend fun setLastBackupAt(t: Long)        = dataStore.edit { it[LAST_BACKUP_AT] = t }
     suspend fun setAutoBackup(v: Boolean)       = dataStore.edit { it[AUTO_BACKUP_ENABLED] = v }
     suspend fun setAutoUpdate(v: Boolean)       = dataStore.edit { it[AUTO_UPDATE_ENABLED] = v }
+
+    fun categoryColorKey(category: PasswordCategory): Preferences.Key<String> =
+        stringPreferencesKey("pw_category_color_${category.name.lowercase()}")
+
+    fun getCategoryColor(category: PasswordCategory): Flow<String> = dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { it[categoryColorKey(category)] ?: "" }
+
+    fun getCategoryColors(): Flow<Map<PasswordCategory, String>> = dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { prefs ->
+            PasswordCategory.values().associateWith { cat ->
+                prefs[categoryColorKey(cat)] ?: ""
+            }
+        }
+
+    suspend fun setCategoryColor(category: PasswordCategory, colorHex: String) = dataStore.edit {
+        if (colorHex.isBlank()) it.remove(categoryColorKey(category))
+        else it[categoryColorKey(category)] = colorHex
+    }
 }

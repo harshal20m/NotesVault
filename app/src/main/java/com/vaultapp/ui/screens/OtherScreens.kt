@@ -246,6 +246,39 @@ fun PasswordEditScreen(
                     )
                 }
             }
+            Text("Category card color (optional)", color = vc.onSurfaceVariant, fontSize = 12.sp)
+            val colorPresets = listOf("", "#FCE4EC", "#E3F2FD", "#E8F5E9", "#FFF8E1", "#EDE7F6", "#FFE0B2")
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                colorPresets.forEach { hex ->
+                    val selected = viewModel.selectedCategoryColorHex.equals(hex, ignoreCase = true)
+                    val swatchColor = if (hex.isBlank()) vc.surface else runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrDefault(vc.surface)
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(swatchColor)
+                            .border(
+                                width = if (selected) 2.dp else 1.dp,
+                                color = if (selected) vc.primary else vc.outline,
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable { viewModel.setSelectedCategoryColor(hex) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (hex.isBlank()) Text("Ø", color = vc.onSurfaceVariant, fontSize = 12.sp)
+                    }
+                }
+            }
+            VaultOutlinedField(
+                label = "Custom HEX (e.g. #F5F5F5)",
+                value = viewModel.selectedCategoryColorHex,
+                onChange = { viewModel.setSelectedCategoryColor(it.take(7)) },
+                vc = vc
+            )
+            Text("Saved per category. Leave blank to use default app color.", color = vc.onSurfaceVariant, fontSize = 11.sp)
 
             VaultOutlinedField("Notes (optional)", viewModel.notes, { viewModel.notes = it }, vc, minLines = 3)
             Spacer(Modifier.height(32.dp))
