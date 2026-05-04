@@ -38,3 +38,6 @@ captures/
 # Secrets (if any)
 secrets.properties
 .env
+
+.kotlin
+
