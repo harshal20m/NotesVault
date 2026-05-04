@@ -1,0 +1,40 @@
+# Gradle files
+.gradle/
+build/
+/*/build/
+
+# Kotlin / Java
+*.class
+*.pyc
+
+# IDE - Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+.project
+.settings/
+.classpath
+out/
+bin/
+
+# Local configuration
+local.properties
+.DS_Store
+Thumbs.db
+
+# Signing files (Never push these to open source)
+*.jks
+*.keystore
+*.p12
+*.jceks
+google-services.json
+
+# Logs
+*.log
+
+# Android Captures
+captures/
+
+# Secrets (if any)
+secrets.properties
+.env
