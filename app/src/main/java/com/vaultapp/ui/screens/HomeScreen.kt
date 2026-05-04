@@ -153,8 +153,8 @@ fun HomeScreen(
                             onClick  = { selectedFilter = f },
                             label    = { Text(f, fontSize = 12.sp) },
                             colors   = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = vc.primary,
-                                selectedLabelColor     = Color.White,
+                                selectedContainerColor = vc.primaryContainer,
+                                selectedLabelColor     = vc.primary,
                                 containerColor         = vc.surface,
                                 labelColor             = vc.onSurfaceVariant
                             ),
@@ -270,6 +270,7 @@ fun NoteCard(note: Note, onClick: () -> Unit, onLongClick: () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(bgColor)
+            .border(1.dp, vc.outline.copy(alpha = 0.85f), RoundedCornerShape(18.dp))
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(14.dp)
     ) {
@@ -278,7 +279,7 @@ fun NoteCard(note: Note, onClick: () -> Unit, onLongClick: () -> Unit) {
             if (note.title.isNotEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (note.isPinned) {
-                        Icon(Icons.Default.PushPin, null, tint = vc.primary.copy(.7f), modifier = Modifier.size(13.dp))
+                        Icon(Icons.Default.PushPin, null, tint = vc.onSurface, modifier = Modifier.size(13.dp))
                         Spacer(Modifier.width(4.dp))
                     }
                     Text(
@@ -291,10 +292,10 @@ fun NoteCard(note: Note, onClick: () -> Unit, onLongClick: () -> Unit) {
                         modifier   = Modifier.weight(1f)
                     )
                     if (note.isLocked) {
-                        Icon(Icons.Default.Lock, null, tint = vc.primary, modifier = Modifier.size(13.dp))
+                        Icon(Icons.Default.Lock, null, tint = vc.onSurface, modifier = Modifier.size(13.dp))
                     }
                     if (note.reminderAt != null) {
-                        Icon(Icons.Default.Alarm, null, tint = vc.primary.copy(.7f), modifier = Modifier.size(13.dp))
+                        Icon(Icons.Default.Alarm, null, tint = vc.onSurface, modifier = Modifier.size(13.dp))
                     }
                 }
             }
