@@ -44,6 +44,8 @@ class HomeViewModel @Inject constructor(
     val notes: StateFlow<List<Note>> = _searchQuery
         .flatMapLatest { q -> if (q.isEmpty()) noteRepo.getAllNotes() else noteRepo.searchNotes(q) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val archivedNotes: StateFlow<List<Note>> = noteRepo.getArchivedNotes()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val passwordCount = passwordRepo.getPasswordCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)

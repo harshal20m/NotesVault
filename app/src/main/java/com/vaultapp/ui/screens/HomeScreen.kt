@@ -42,18 +42,20 @@ fun HomeScreen(
 ) {
     val vc            = MaterialTheme.vaultColors
     val notes         by viewModel.notes.collectAsStateWithLifecycle()
+    val archivedNotes by viewModel.archivedNotes.collectAsStateWithLifecycle()
     val searchQuery   by viewModel.searchQuery.collectAsStateWithLifecycle()
     val gridColumns   by viewModel.gridColumns.collectAsStateWithLifecycle()
     val passwordCount by viewModel.passwordCount.collectAsStateWithLifecycle()
     var selectedFilter by remember { mutableStateOf("All") }
     var selectedNote by remember { mutableStateOf<Note?>(null) }
-    val filters = remember { listOf("All", "Notes", "Pinned", "Media", "Locked") }
+    val filters = remember { listOf("All", "Notes", "Pinned", "Media", "Locked", "Archived") }
 
-    val displayNotes = remember(notes, selectedFilter) {
+    val displayNotes = remember(notes, archivedNotes, selectedFilter) {
         when (selectedFilter) {
             "Pinned" -> notes.filter { it.isPinned }
             "Media"  -> notes.filter { it.mediaUris.isNotEmpty() }
             "Locked" -> notes.filter { it.isLocked }
+            "Archived" -> archivedNotes
             else     -> notes
         }
     }
