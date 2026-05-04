@@ -11,7 +11,6 @@ import com.vaultapp.data.repository.NoteRepository
 import com.vaultapp.data.repository.PasswordRepository
 import com.vaultapp.service.UpdateManager
 import com.vaultapp.util.CryptoManager
-import com.vaultapp.util.CryptoManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -53,6 +52,9 @@ class HomeViewModel @Inject constructor(
 
     fun onSearchQuery(q: String) { _searchQuery.value = q }
     fun togglePin(id: Long, pinned: Boolean) = viewModelScope.launch { noteRepo.setPinned(id, pinned) }
+    fun archiveNote(id: Long) = viewModelScope.launch { noteRepo.setArchived(id, true) }
+    fun unarchiveNote(id: Long) = viewModelScope.launch { noteRepo.setArchived(id, false) }
+    fun deleteNote(id: Long) = viewModelScope.launch { noteRepo.deleteNote(id) }
     fun toggleGridColumns() = viewModelScope.launch {
         prefs.setGridColumns(if (prefs.gridColumns.first() == 2) 1 else 2)
     }

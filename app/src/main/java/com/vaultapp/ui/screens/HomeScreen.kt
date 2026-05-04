@@ -46,6 +46,7 @@ fun HomeScreen(
     val gridColumns   by viewModel.gridColumns.collectAsStateWithLifecycle()
     val passwordCount by viewModel.passwordCount.collectAsStateWithLifecycle()
     var selectedFilter by remember { mutableStateOf("All") }
+    var selectedNote by remember { mutableStateOf<Note?>(null) }
     val filters = remember { listOf("All", "Notes", "Pinned", "Media", "Locked") }
 
     val displayNotes = remember(notes, selectedFilter) {
@@ -207,8 +208,7 @@ fun HomeScreen(
                                 note        = note,
                                 onClick     = { onNoteClick(note.id) },
                                 onLongClick = {
-                                    viewModel.togglePin(note.id, !note.isPinned)
-                                    if (note.isPinned) ToastManager.unpinned() else ToastManager.pinned()
+                                    selectedNote = note
                                 }
                             )
                         }
@@ -216,6 +216,41 @@ fun HomeScreen(
                 }
             }
         }
+    }
+    selectedNote?.let { note ->
+        AlertDialog(
+            onDismissRequest = { selectedNote = null },
+            containerColor = vc.surface,
+            title = { Text("Note options", color = vc.onBackground) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TextButton(onClick = {
+                        viewModel.togglePin(note.id, !note.isPinned)
+                        if (note.isPinned) ToastManager.unpinned() else ToastManager.pinned()
+                        selectedNote = null
+                    }) { Text(if (note.isPinned) "Unpin" else "Pin", color = vc.primary) }
+                    TextButton(onClick = {
+                        if (note.isArchived) {
+                            viewModel.unarchiveNote(note.id)
+                            ToastManager.info("Note unarchived")
+                        } else {
+                            viewModel.archiveNote(note.id)
+                            ToastManager.info("Note archived")
+                        }
+                        selectedNote = null
+                    }) { Text(if (note.isArchived) "Unarchive" else "Archive", color = vc.primary) }
+                    TextButton(onClick = {
+                        viewModel.deleteNote(note.id)
+                        ToastManager.deleted()
+                        selectedNote = null
+                    }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { selectedNote = null }) { Text("Cancel", color = vc.onSurfaceVariant) }
+            }
+        )
     }
 }
 
