@@ -26,7 +26,6 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vaultapp.ui.components.VaultToastHost
 import com.vaultapp.ui.theme.VaultColors
 import com.vaultapp.ui.theme.vaultColors
 import com.vaultapp.ui.viewmodel.LockViewModel
@@ -74,8 +73,7 @@ fun LockScreen(
 
     LaunchedEffect(Unit) { if (useBio) tryBiometric() }
 
-    VaultToastHost {
-        Box(modifier = Modifier.fillMaxSize().background(vc.background), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier.fillMaxSize().background(vc.background), contentAlignment = Alignment.Center) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
@@ -165,7 +163,6 @@ fun LockScreen(
                 }
             }
         }
-    }
 }
 
 @Composable

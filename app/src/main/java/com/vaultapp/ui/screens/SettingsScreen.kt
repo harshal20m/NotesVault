@@ -23,7 +23,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vaultapp.data.model.AppTheme
 import com.vaultapp.data.model.LockTimeout
 import com.vaultapp.ui.components.ToastManager
-import com.vaultapp.ui.components.VaultToastHost
 import com.vaultapp.ui.theme.toVaultColors
 import com.vaultapp.ui.theme.vaultColors
 import com.vaultapp.ui.viewmodel.SettingsViewModel
@@ -37,14 +36,14 @@ fun SettingsScreen(
 ) {
     val vc           = MaterialTheme.vaultColors
     val useBio       by viewModel.useBiometrics.collectAsStateWithLifecycle()
+    val autoUpdate   by viewModel.autoUpdateEnabled.collectAsStateWithLifecycle()
     val lockTimeout  by viewModel.lockTimeout.collectAsStateWithLifecycle()
     val currentTheme by viewModel.appTheme.collectAsStateWithLifecycle()
     val recovEmail   by viewModel.recoveryEmail.collectAsStateWithLifecycle()
     var showTimeoutPicker by remember { mutableStateOf(false) }
 
-    VaultToastHost {
-        Scaffold(
-            containerColor = vc.background,
+    Scaffold(
+        containerColor = vc.background,
             topBar = {
                 TopAppBar(
                     navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = vc.onBackground) } },
@@ -63,6 +62,15 @@ fun SettingsScreen(
                     SettingsRow(Icons.Outlined.Timer, "Lock timeout", lockTimeout.label) { showTimeoutPicker = true }
                     SettingsRow(Icons.Outlined.Email, "Recovery email", recovEmail.ifEmpty { "Not set — tap to add" }) {}
                 }
+                SettingsSection("Updates") {
+                    SettingsSwitchRow(Icons.Outlined.Update, "Auto-update", "Check for updates automatically", autoUpdate) {
+                        viewModel.setAutoUpdate(it)
+                    }
+                    SettingsRow(Icons.Outlined.SystemUpdate, "Check for updates", "Search for new version on GitHub") {
+                        viewModel.checkForUpdates()
+                        ToastManager.info("Checking for updates...")
+                    }
+                }
                 SettingsSection("Appearance") {
                     SettingsRow(Icons.Outlined.Palette, "Themes", currentTheme.displayName, trailing = {
                         Box(Modifier.size(20.dp).clip(RoundedCornerShape(6.dp)).background(Color(android.graphics.Color.parseColor(currentTheme.primaryHex))))
@@ -79,10 +87,9 @@ fun SettingsScreen(
                     SettingsRow(Icons.Outlined.Info, "Version", "1.0.0 · Kotlin + Compose") {}
                     SettingsRow(Icons.Outlined.PrivacyTip, "Privacy", "Fully offline · AES-256-GCM · No telemetry") {}
                 }
-                Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(100.dp))
             }
         }
-    }
 
     if (showTimeoutPicker) {
         AlertDialog(onDismissRequest = { showTimeoutPicker = false }, containerColor = vc.surface,
@@ -147,29 +154,27 @@ fun ThemesScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewMode
     val vc           = MaterialTheme.vaultColors
     val currentTheme by viewModel.appTheme.collectAsStateWithLifecycle()
 
-    VaultToastHost {
-        Scaffold(
-            containerColor = vc.background,
-            topBar = {
-                TopAppBar(
-                    navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = vc.onBackground) } },
-                    title = { Text("Themes", color = vc.onBackground, fontWeight = FontWeight.SemiBold) },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = vc.surface)
-                )
-            }
-        ) { padding ->
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                contentPadding = PaddingValues(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement   = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxSize().background(vc.background).padding(padding)
-            ) {
-                items(AppTheme.values()) { theme ->
-                    ThemeSwatch(theme = theme, isSelected = theme == currentTheme) {
-                        viewModel.setTheme(theme)
-                        ToastManager.success("${theme.displayName} theme applied")
-                    }
+    Scaffold(
+        containerColor = vc.background,
+        topBar = {
+            TopAppBar(
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = vc.onBackground) } },
+                title = { Text("Themes", color = vc.onBackground, fontWeight = FontWeight.SemiBold) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = vc.surface)
+            )
+        }
+    ) { padding ->
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 100.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement   = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxSize().background(vc.background).padding(padding)
+        ) {
+            items(AppTheme.values()) { theme ->
+                ThemeSwatch(theme = theme, isSelected = theme == currentTheme) {
+                    viewModel.setTheme(theme)
+                    ToastManager.success("${theme.displayName} theme applied")
                 }
             }
         }

@@ -9,6 +9,7 @@ import com.vaultapp.data.local.PreferencesManager
 import com.vaultapp.data.model.*
 import com.vaultapp.data.repository.NoteRepository
 import com.vaultapp.data.repository.PasswordRepository
+import com.vaultapp.service.UpdateManager
 import com.vaultapp.util.CryptoManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -169,16 +170,72 @@ class PasswordEditViewModel @Inject constructor(private val repo: PasswordReposi
 
 // ── SettingsViewModel ─────────────────────────────────────────────────────────
 @HiltViewModel
-class SettingsViewModel @Inject constructor(private val prefs: PreferencesManager) : ViewModel() {
-    val useBiometrics = prefs.useBiometrics.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), true)
-    val lockTimeout   = prefs.lockTimeout  .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), LockTimeout.IMMEDIATELY)
-    val appTheme      = prefs.appTheme     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), AppTheme.MIDNIGHT)
-    val recoveryEmail = prefs.recoveryEmail.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
-    val gridColumns   = prefs.gridColumns  .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 2)
+class SettingsViewModel @Inject constructor(
+    private val prefs: PreferencesManager,
+    private val updateManager: UpdateManager
+) : ViewModel() {
+    val useBiometrics     = prefs.useBiometrics.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), true)
+    val autoUpdateEnabled = prefs.autoUpdateEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), true)
+    val lockTimeout       = prefs.lockTimeout  .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), LockTimeout.IMMEDIATELY)
+    val appTheme          = prefs.appTheme     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), AppTheme.MIDNIGHT)
+    val recoveryEmail     = prefs.recoveryEmail.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
+    val gridColumns       = prefs.gridColumns  .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 2)
 
     fun setBiometrics(v: Boolean)      = viewModelScope.launch { prefs.setBiometrics(v) }
+    fun setAutoUpdate(v: Boolean)      = viewModelScope.launch { prefs.setAutoUpdate(v) }
     fun setLockTimeout(t: LockTimeout) = viewModelScope.launch { prefs.setLockTimeout(t) }
     fun setTheme(t: AppTheme)          = viewModelScope.launch { prefs.setTheme(t) }
     fun setGridColumns(c: Int)         = viewModelScope.launch { prefs.setGridColumns(c) }
     fun setRecoveryEmail(e: String)    = viewModelScope.launch { prefs.setRecoveryEmail(e) }
+
+    fun checkForUpdates() = viewModelScope.launch {
+        updateManager.checkForUpdates(force = true)
+    }
 }
+
+// ── AnalyticsViewModel ────────────────────────────────────────────────────────
+@HiltViewModel
+class AnalyticsViewModel @Inject constructor(
+    private val noteRepo: NoteRepository,
+    private val passwordRepo: PasswordRepository
+) : ViewModel() {
+    val noteCount = noteRepo.getNoteCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    val passwordStats = passwordRepo.getAllPasswords().map { passwords ->
+        val total = passwords.size
+        val weak = passwords.count { it.passwordStrength == PasswordStrength.WEAK }
+        val fair = passwords.count { it.passwordStrength == PasswordStrength.FAIR }
+        val medium = passwords.count { it.passwordStrength == PasswordStrength.MEDIUM }
+        val strong = passwords.count { it.passwordStrength == PasswordStrength.STRONG }
+        val mostActiveCategory = passwords.groupBy { it.category }
+            .maxByOrNull { it.value.size }?.key?.name ?: "None"
+        PasswordStats(total, weak, fair, medium, strong, mostActiveCategory)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PasswordStats())
+
+    val noteStats = noteRepo.getAllNotes().map { notes ->
+        val total = notes.size
+        val pinned = notes.count { it.isPinned }
+        val locked = notes.count { it.isLocked }
+        val withMedia = notes.count { it.mediaUris.isNotEmpty() }
+        val tagCount = notes.flatMap { it.tags }.distinct().size
+        NoteStats(total, pinned, locked, withMedia, tagCount)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NoteStats())
+}
+
+data class PasswordStats(
+    val total: Int = 0,
+    val weak: Int = 0,
+    val fair: Int = 0,
+    val medium: Int = 0,
+    val strong: Int = 0,
+    val mostActiveCategory: String = "None"
+)
+
+data class NoteStats(
+    val total: Int = 0,
+    val pinned: Int = 0,
+    val locked: Int = 0,
+    val withMedia: Int = 0,
+    val tagCount: Int = 0
+)

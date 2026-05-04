@@ -70,7 +70,13 @@ fun TagsScreen(onNoteClick: (Long) -> Unit, onBack: () -> Unit, viewModel: TagsV
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = vc.surface))
         }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().background(vc.background).padding(padding)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(vc.background)
+                .padding(padding)
+                .padding(bottom = 100.dp)
+        ) {
             OutlinedTextField(value = search, onValueChange = { search = it },
                 placeholder = { Text("Search tags…", color = vc.onSurfaceVariant) },
                 leadingIcon = { Icon(Icons.Outlined.Search, null, tint = vc.onSurfaceVariant) },
@@ -87,7 +93,7 @@ fun TagsScreen(onNoteClick: (Long) -> Unit, onBack: () -> Unit, viewModel: TagsV
                     }
                 }
             } else {
-                LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+                LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
                     items(visible.entries.toList(), key = { it.key }) { (tag, count) ->
                         TagRow(tag, count, expanded == tag, if (expanded == tag) viewModel.notesFor(tag) else emptyList(), vc,
                             onExpand = { expanded = if (expanded == tag) null else tag },

@@ -72,16 +72,34 @@ class RichTextState {
         return gson.toJson(mapOf(
             "text"      to textFieldValue.text,
             "mode"      to editorMode.name,
-            "checklist" to checklistItems.toList()
+            "checklist" to checklistItems.toList(),
+            "spans"     to spans.toList()
         ))
     }
 
     fun loadFromJson(json: String) {
         runCatching {
             val map = com.google.gson.Gson().fromJson(json, Map::class.java)
-            textFieldValue = TextFieldValue(map["text"] as? String ?: json)
+            val text = map["text"] as? String ?: json
+            textFieldValue = TextFieldValue(text)
+            
             (map["mode"] as? String)?.let { m ->
                 runCatching { editorMode = EditorMode.valueOf(m) }
+            }
+            // restore spans
+            @Suppress("UNCHECKED_CAST")
+            (map["spans"] as? List<Map<String,Any>>)?.let { list ->
+                spans.clear()
+                list.forEach { item ->
+                    val type = runCatching { SpanType.valueOf(item["type"] as String) }.getOrNull()
+                    if (type != null) {
+                        spans.add(TextSpan(
+                            start = (item["start"] as Double).toInt(),
+                            end   = (item["end"] as Double).toInt(),
+                            type  = type
+                        ))
+                    }
+                }
             }
             // restore checklist items
             @Suppress("UNCHECKED_CAST")

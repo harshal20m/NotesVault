@@ -80,7 +80,8 @@ data class AppSettings(
     val backupEnabled: Boolean = false,
     val lastBackupAt: Long? = null,
     val isFirstLaunch: Boolean = true,
-    val recoveryEmail: String = ""
+    val recoveryEmail: String = "",
+    val autoUpdateEnabled: Boolean = true
 )
 
 enum class AppTheme(

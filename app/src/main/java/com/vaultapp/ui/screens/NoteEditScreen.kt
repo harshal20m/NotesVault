@@ -38,6 +38,7 @@ import com.vaultapp.ui.screens.editor.*
 import com.vaultapp.ui.theme.VaultColors
 import com.vaultapp.ui.theme.vaultColors
 import com.vaultapp.ui.viewmodel.NoteEditViewModel
+import com.vaultapp.util.FileHelper
 import com.vaultapp.util.ShareHelper
 import java.text.SimpleDateFormat
 import java.util.*
@@ -70,16 +71,48 @@ fun NoteEditScreen(
         }
     }
 
-    // Image picker
-    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        uris.forEach { uri -> viewModel.addMedia(uri.toString()) }
-        if (uris.isNotEmpty()) ToastManager.show("${uris.size} image(s) added")
+    // Updated picker for images and PDF
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        var added = 0
+        var tooLarge = 0
+        uris.forEach { uri ->
+            if (FileHelper.isSizeValid(ctx, uri, 2)) {
+                viewModel.addMedia(uri.toString())
+                added++
+            } else {
+                tooLarge++
+            }
+        }
+        if (added > 0) ToastManager.show("$added file(s) added")
+        if (tooLarge > 0) ToastManager.error("$tooLarge file(s) exceed 2MB limit")
+    }
+
+    // Voice to text launcher
+    val voiceLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
+        if (res.resultCode == android.app.Activity.RESULT_OK) {
+            val results = res.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+            if (!results.isNullOrEmpty()) {
+                val spokenText = results[0]
+                val currentText = rts.textFieldValue.text
+                val selection = rts.textFieldValue.selection
+                val newText = currentText.substring(0, selection.start) + spokenText + currentText.substring(selection.end)
+                rts.textFieldValue = androidx.compose.ui.text.input.TextFieldValue(
+                    text = newText,
+                    selection = androidx.compose.ui.text.TextRange(selection.start + spokenText.length)
+                )
+            }
+        }
     }
 
     val cardBg = note?.color?.toCardColor(vc) ?: vc.surface
 
     fun save() {
-        viewModel.onContent(rts.serializeToJson())
+        val content = rts.serializeToJson()
+        if (viewModel.title.isEmpty() && rts.textFieldValue.text.isEmpty() && (note?.mediaUris?.isEmpty() ?: true)) {
+            // Don't save empty note
+            return
+        }
+        viewModel.onContent(content)
         viewModel.saveNote()
     }
 
@@ -132,9 +165,9 @@ fun NoteEditScreen(
                         DropdownMenuItem(text = { Text("Tags", color = vc.onSurface) },
                             leadingIcon = { Icon(Icons.Outlined.Tag, null, tint = vc.onSurfaceVariant) },
                             onClick = { showTagsEditor = !showTagsEditor; showMoreMenu = false })
-                        DropdownMenuItem(text = { Text("Add images", color = vc.onSurface) },
-                            leadingIcon = { Icon(Icons.Outlined.Image, null, tint = vc.onSurfaceVariant) },
-                            onClick = { imagePicker.launch("image/*"); showMoreMenu = false })
+                        DropdownMenuItem(text = { Text("Add files", color = vc.onSurface) },
+                            leadingIcon = { Icon(Icons.Outlined.AttachFile, null, tint = vc.onSurfaceVariant) },
+                            onClick = { filePicker.launch(arrayOf("image/*", "application/pdf")); showMoreMenu = false })
                         HorizontalDivider(color = vc.outline)
                         DropdownMenuItem(text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
                             leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.error) },
@@ -149,9 +182,15 @@ fun NoteEditScreen(
                 FormattingToolbar(
                     state         = rts,
                     onColorPicker = { showColorPicker = !showColorPicker },
-                    onAddMedia    = { imagePicker.launch("image/*") },
+                    onAddMedia    = { filePicker.launch(arrayOf("image/*", "application/pdf")) },
                     onCamera      = { onMediaOpen(note?.id ?: -1L) },
-                    onVoice       = {},
+                    onVoice       = {
+                        val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                            putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Speak now...")
+                        }
+                        runCatching { voiceLauncher.launch(intent) }.onFailure { ToastManager.error("Voice recognition not supported") }
+                    },
                     onTags        = { showTagsEditor = !showTagsEditor }
                 )
                 AnimatedVisibility(visible = showColorPicker, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {

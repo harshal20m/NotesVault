@@ -25,7 +25,6 @@ import androidx.lifecycle.viewModelScope
 import com.vaultapp.data.model.Note
 import com.vaultapp.data.repository.NoteRepository
 import com.vaultapp.ui.components.ToastManager
-import com.vaultapp.ui.components.VaultToastHost
 import com.vaultapp.ui.theme.vaultColors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -55,9 +54,8 @@ fun TrashScreen(
     val notes by viewModel.deletedNotes.collectAsStateWithLifecycle()
     var showEmptyConfirm by remember { mutableStateOf(false) }
 
-    VaultToastHost {
-        Scaffold(
-            containerColor = vc.background,
+    Scaffold(
+        containerColor = vc.background,
             topBar = {
                 TopAppBar(
                     navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = vc.onBackground) } },
@@ -76,16 +74,22 @@ fun TrashScreen(
                 )
             }
         ) { padding ->
-            if (notes.isEmpty()) {
-                Box(Modifier.fillMaxSize().background(vc.background).padding(padding), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("🗑️", fontSize = 56.sp); Spacer(Modifier.height(12.dp))
-                        Text("Trash is empty", color = vc.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Medium)
-                        Text("Deleted notes appear here for 30 days", color = vc.onSurfaceVariant, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(vc.background)
+                    .padding(padding)
+                    .padding(bottom = 100.dp)
+            ) {
+                if (notes.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("🗑️", fontSize = 56.sp); Spacer(Modifier.height(12.dp))
+                            Text("Trash is empty", color = vc.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Medium)
+                            Text("Deleted notes appear here for 30 days", color = vc.onSurfaceVariant, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+                        }
                     }
-                }
-            } else {
-                Column(modifier = Modifier.fillMaxSize().background(vc.background).padding(padding)) {
+                } else {
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
                         .clip(RoundedCornerShape(10.dp)).background(vc.surfaceVariant).padding(10.dp),
                         verticalAlignment = Alignment.CenterVertically) {
@@ -95,7 +99,7 @@ fun TrashScreen(
                     }
                     LazyVerticalStaggeredGrid(
                         columns = StaggeredGridCells.Fixed(2),
-                        contentPadding = PaddingValues(start = 12.dp, top = 4.dp, end = 12.dp, bottom = 32.dp),
+                        contentPadding = PaddingValues(start = 12.dp, top = 4.dp, end = 12.dp, bottom = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp), verticalItemSpacing = 8.dp
                     ) {
                         items(notes, key = { it.id }) { note ->
@@ -107,7 +111,6 @@ fun TrashScreen(
                 }
             }
         }
-    }
 
     if (showEmptyConfirm) {
         AlertDialog(onDismissRequest = { showEmptyConfirm = false }, containerColor = vc.surface,

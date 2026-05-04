@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,8 +51,6 @@ private fun TextEditor(
     onContentChange: (String) -> Unit
 ) {
     val fr = remember { FocusRequester() }
-    // Build displayed annotated string with spans applied
-    val annotated = state.buildAnnotatedString()
 
     BasicTextField(
         value          = state.textFieldValue,
@@ -65,6 +64,12 @@ private fun TextEditor(
             lineHeight  = 26.sp
         ),
         cursorBrush    = SolidColor(vc.primary),
+        visualTransformation = { text ->
+            androidx.compose.ui.text.input.TransformedText(
+                state.buildAnnotatedString(),
+                androidx.compose.ui.text.input.OffsetMapping.Identity
+            )
+        },
         modifier       = Modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 300.dp)

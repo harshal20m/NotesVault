@@ -114,8 +114,16 @@ fun BackupScreen(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel(
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().background(vc.background).padding(padding)
-            .verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(vc.background)
+                .padding(padding)
+                .padding(bottom = 100.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
 
             // Last backup
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = vc.surface), border = BorderStroke(.5.dp, vc.outline)) {
@@ -178,6 +186,7 @@ fun BackupScreen(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel(
                     }
                 }
             }
+            Spacer(Modifier.height(100.dp))
         }
     }
 }

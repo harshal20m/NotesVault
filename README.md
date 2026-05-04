@@ -3,6 +3,8 @@
 A beautiful, fully offline, encrypted notes and password vault app for Android.
 Built with **Kotlin 2.0 + Jetpack Compose** (latest modern stack).
 
+[**View on GitHub**](https://github.com/harshal20m/NotesVault)
+
 ---
 
 ## ✨ Features
@@ -51,8 +53,9 @@ Built with **Kotlin 2.0 + Jetpack Compose** (latest modern stack).
 
 ## 🔒 Security First
 
-Vault is designed with a **Zero-Trust** local-only approach:
-- **No Network Access**: The app is intentionally built without network permissions to ensure your data never leaves your device.
+Vault is designed with a **Zero-Trust** approach:
+- **Privacy Focused**: The app is built to ensure your data never leaves your device. Network access is used solely for the Auto-Update system.
+- **Auto-Update Manager**: Integrated with GitHub Releases to notify you of new security patches and features.
 - **Hardware Encryption**: Encryption keys are generated and stored in the device's Secure Element/TEE.
 - **Auto-Lock**: Configurable timeout (Immediate, 1 min, 5 min, etc.) to keep your vault safe even if you leave the app open.
 - **Encrypted Backups**: Export your data as an encrypted JSON file for safe-keeping.
@@ -108,4 +111,16 @@ VaultApp/
 ## 📝 Developer Notes
 - `CryptoManager.encrypt/decrypt` uses per-encryption IVs stored with the ciphertext.
 - All note content is stored as serialized JSON to preserve rich text formatting and checklist state while maintaining Room compatibility.
-- The app uses `network_security_config.xml` to strictly enforce no-network policies at the OS level.
+- The app uses `network_security_config.xml` to strictly enforce secure (HTTPS) connections for update checks.
+
+---
+
+## ⚖️ License & Legal Warning
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+### 🛑 IMPORTANT: READ BEFORE PROCEEDING
+**DO NOT copy, modify, and release this as a separate project.** 
+I take the theft of my work very seriously. Stealing this codebase to launch a competing app will result in **immediate legal action**. 
+
+**However**, all open-source contributions are warmly welcomed! If you contribute to this project, you will be **glorified and framed** in the contributors' hall of fame. Let's build something great together, rather than stealing.

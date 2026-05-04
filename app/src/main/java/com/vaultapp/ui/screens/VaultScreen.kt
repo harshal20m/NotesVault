@@ -46,7 +46,9 @@ fun VaultScreen(
     val scope     = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
 
-    val display = if (selCat == null) passwords else passwords.filter { it.category == selCat }
+    val display = remember(passwords, selCat) {
+        if (selCat == null) passwords else passwords.filter { it.category == selCat }
+    }
 
     Scaffold(
         containerColor = vc.background,
@@ -69,12 +71,23 @@ fun VaultScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddPassword, containerColor = vc.primary, contentColor = Color.White) {
+            FloatingActionButton(
+                onClick = onAddPassword,
+                containerColor = vc.primary,
+                contentColor = Color.White,
+                modifier = Modifier.padding(bottom = 110.dp)
+            ) {
                 Icon(Icons.Default.Add, null)
             }
         }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().background(vc.background).padding(padding)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(vc.background)
+                .padding(padding)
+                .padding(bottom = 100.dp)
+        ) {
             // Search
             OutlinedTextField(
                 value = searchQ, onValueChange = viewModel::onSearchQuery,
@@ -115,7 +128,7 @@ fun VaultScreen(
                 if (useGrid) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(start = 12.dp, top = 4.dp, end = 12.dp, bottom = 80.dp),
+                        contentPadding = PaddingValues(start = 12.dp, top = 4.dp, end = 12.dp, bottom = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalArrangement   = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.fillMaxSize()
@@ -135,15 +148,13 @@ fun VaultScreen(
                     }
                 } else {
                     // List layout
-                    display.groupBy { it.category }.forEach { (cat, items) ->
-                        // Can't use LazyColumn inside Column - use regular Column items
-                    }
+                    val grouped = remember(display) { display.groupBy { it.category } }
                     // FIX: use non-lazy list inside scrollable column to avoid infinite height crash
                     Column(
                         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        display.groupBy { it.category }.forEach { (cat, items) ->
+                        grouped.forEach { (cat, items) ->
                             Text(cat.name.lowercase().replaceFirstChar { it.uppercase() },
                                 color = vc.onSurfaceVariant, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
@@ -158,7 +169,6 @@ fun VaultScreen(
                                 )
                             }
                         }
-                        Spacer(Modifier.height(80.dp))
                     }
                 }
             }

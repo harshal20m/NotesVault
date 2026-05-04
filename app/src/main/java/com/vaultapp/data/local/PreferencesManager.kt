@@ -33,6 +33,7 @@ class PreferencesManager @Inject constructor(@ApplicationContext private val con
         val LAST_BACKUP_AT       = longPreferencesKey("last_backup_at")
         val LAST_ACTIVE_AT       = longPreferencesKey("last_active_at")
         val AUTO_BACKUP_ENABLED  = booleanPreferencesKey("auto_backup_enabled")
+        val AUTO_UPDATE_ENABLED  = booleanPreferencesKey("auto_update_enabled")
     }
 
     private fun <T> flow(key: Preferences.Key<T>, default: T): Flow<T> =
@@ -45,6 +46,7 @@ class PreferencesManager @Inject constructor(@ApplicationContext private val con
     val recoveryEmail: Flow<String>    = flow(RECOVERY_EMAIL, "")
     val lastActiveAt: Flow<Long>       = flow(LAST_ACTIVE_AT, 0L)
     val autoBackupEnabled: Flow<Boolean> = flow(AUTO_BACKUP_ENABLED, false)
+    val autoUpdateEnabled: Flow<Boolean> = flow(AUTO_UPDATE_ENABLED, true)
 
     val appTheme: Flow<AppTheme> = dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
@@ -65,4 +67,5 @@ class PreferencesManager @Inject constructor(@ApplicationContext private val con
     suspend fun updateLastActiveAt()            = dataStore.edit { it[LAST_ACTIVE_AT] = System.currentTimeMillis() }
     suspend fun setLastBackupAt(t: Long)        = dataStore.edit { it[LAST_BACKUP_AT] = t }
     suspend fun setAutoBackup(v: Boolean)       = dataStore.edit { it[AUTO_BACKUP_ENABLED] = v }
+    suspend fun setAutoUpdate(v: Boolean)       = dataStore.edit { it[AUTO_UPDATE_ENABLED] = v }
 }

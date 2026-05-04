@@ -25,7 +25,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vaultapp.data.model.Note
 import com.vaultapp.data.model.NoteColor
 import com.vaultapp.ui.components.ToastManager
-import com.vaultapp.ui.components.VaultToastHost
 import com.vaultapp.ui.theme.VaultColors
 import com.vaultapp.ui.theme.vaultColors
 import com.vaultapp.ui.viewmodel.HomeViewModel
@@ -47,25 +46,38 @@ fun HomeScreen(
     val gridColumns   by viewModel.gridColumns.collectAsStateWithLifecycle()
     val passwordCount by viewModel.passwordCount.collectAsStateWithLifecycle()
     var selectedFilter by remember { mutableStateOf("All") }
-    var selectedNav    by remember { mutableStateOf(0) }
-    val filters = listOf("All", "Notes", "Pinned", "Media", "Locked")
+    val filters = remember { listOf("All", "Notes", "Pinned", "Media", "Locked") }
 
-    val displayNotes = when (selectedFilter) {
-        "Pinned" -> notes.filter { it.isPinned }
-        "Media"  -> notes.filter { it.mediaUris.isNotEmpty() }
-        "Locked" -> notes.filter { it.isLocked }
-        else     -> notes
+    val displayNotes = remember(notes, selectedFilter) {
+        when (selectedFilter) {
+            "Pinned" -> notes.filter { it.isPinned }
+            "Media"  -> notes.filter { it.mediaUris.isNotEmpty() }
+            "Locked" -> notes.filter { it.isLocked }
+            else     -> notes
+        }
     }
 
-    VaultToastHost {
-        Box(modifier = Modifier.fillMaxSize().background(vc.background)) {
+    Scaffold(
+        containerColor = vc.background,
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick          = onAddNote,
+                containerColor   = vc.primary,
+                contentColor     = Color.White,
+                modifier         = Modifier.padding(bottom = 110.dp)
+            ) {
+                Icon(Icons.Default.Add, null)
+            }
+        }
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
 
             // ── Main content ────────────────────────────────────────────────
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     // FIX: bottom padding = floating nav height so content isn't hidden
-                    .padding(bottom = 84.dp)
+                    .padding(bottom = 100.dp)
             ) {
                 // ── App bar — NO extra spacer, tight to status bar ─────────
                 Row(
@@ -201,103 +213,6 @@ fun HomeScreen(
                         }
                     }
                 }
-            }
-
-            // ── FAB ────────────────────────────────────────────────────────
-            FloatingActionButton(
-                onClick          = onAddNote,
-                containerColor   = vc.primary,
-                contentColor     = Color.White,
-                shape            = CircleShape,
-                modifier         = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 20.dp, bottom = 96.dp)
-                    .size(54.dp)
-            ) {
-                Icon(Icons.Default.Add, "Add note", modifier = Modifier.size(26.dp))
-            }
-
-            // ── Floating bottom nav bar ────────────────────────────────────
-            FloatingBottomNav(
-                selectedIndex    = selectedNav,
-                onHome           = { selectedNav = 0 },
-                onNotes          = { selectedNav = 1 },
-                onVault          = { selectedNav = 2; onNavigateToVault() },
-                onSettings       = { selectedNav = 3; onNavigateToSettings() },
-                vc               = vc,
-                modifier         = Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(horizontal = 24.dp, vertical = 12.dp)
-            )
-        }
-    }
-}
-
-// ── Floating bottom navigation ─────────────────────────────────────────────────
-@Composable
-private fun FloatingBottomNav(
-    selectedIndex: Int,
-    onHome: () -> Unit,
-    onNotes: () -> Unit,
-    onVault: () -> Unit,
-    onSettings: () -> Unit,
-    vc: VaultColors,
-    modifier: Modifier = Modifier
-) {
-    val navItems = listOf(
-        Triple(Icons.Filled.GridView,      Icons.Outlined.GridView,      "Home"),
-        Triple(Icons.Filled.StickyNote2,   Icons.Outlined.StickyNote2,   "Notes"),
-        Triple(Icons.Filled.Lock,          Icons.Outlined.Lock,          "Vault"),
-        Triple(Icons.Filled.Person,        Icons.Outlined.Person,        "Settings")
-    )
-    val actions = listOf(onHome, onNotes, onVault, onSettings)
-
-    Row(
-        modifier              = modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation    = 20.dp,
-                shape        = RoundedCornerShape(28.dp),
-                ambientColor = vc.primary.copy(.15f),
-                spotColor    = vc.primary.copy(.25f)
-            )
-            .clip(RoundedCornerShape(28.dp))
-            .background(vc.surface)
-            .padding(horizontal = 8.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment     = Alignment.CenterVertically
-    ) {
-        navItems.forEachIndexed { i, (filledIcon, outlineIcon, label) ->
-            val selected = selectedIndex == i
-            Column(
-                modifier              = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable(onClick = actions[i])
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                horizontalAlignment   = Alignment.CenterHorizontally,
-                verticalArrangement   = Arrangement.spacedBy(3.dp)
-            ) {
-                Box(
-                    modifier         = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (selected) vc.primaryContainer else Color.Transparent)
-                        .padding(horizontal = 14.dp, vertical = 4.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector       = if (selected) filledIcon else outlineIcon,
-                        contentDescription = label,
-                        tint              = if (selected) vc.primary else vc.onSurfaceVariant,
-                        modifier          = Modifier.size(22.dp)
-                    )
-                }
-                Text(
-                    label,
-                    color    = if (selected) vc.primary else vc.onSurfaceVariant,
-                    fontSize = 10.sp,
-                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-                )
             }
         }
     }

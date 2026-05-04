@@ -90,15 +90,26 @@ fun MediaCaptureBar(onImageCaptured: (Uri) -> Unit, onImagePicked: (Uri) -> Unit
 fun NoteMediaGrid(mediaUris: List<String>, onRemove: (String) -> Unit, onFullScreen: (String) -> Unit) {
     if (mediaUris.isEmpty()) return
     val vc = MaterialTheme.vaultColors
+    val ctx = LocalContext.current
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         mediaUris.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                row.forEach { uri ->
-                    Box(modifier = Modifier.weight(1f).aspectRatio(1f).clip(RoundedCornerShape(12.dp)).clickable { onFullScreen(uri) }) {
-                        AsyncImage(model = ImageRequest.Builder(LocalContext.current).data(uri).crossfade(true).build(),
-                            contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                row.forEach { uriString ->
+                    val uri = Uri.parse(uriString)
+                    val isPdf = ctx.contentResolver.getType(uri)?.contains("pdf") == true || uriString.endsWith(".pdf", true)
+                    
+                    Box(modifier = Modifier.weight(1f).aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(vc.surfaceVariant).clickable { onFullScreen(uriString) }) {
+                        if (isPdf) {
+                            Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                Icon(Icons.Outlined.PictureAsPdf, null, tint = Color(0xFFE24B4A), modifier = Modifier.size(32.dp))
+                                Text("PDF", color = vc.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        } else {
+                            AsyncImage(model = ImageRequest.Builder(LocalContext.current).data(uriString).crossfade(true).build(),
+                                contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        }
                         Box(modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp).clip(CircleShape)
-                            .background(Color.Black.copy(.6f)).clickable { onRemove(uri) }, contentAlignment = Alignment.Center) {
+                            .background(Color.Black.copy(.6f)).clickable { onRemove(uriString) }, contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(12.dp))
                         }
                     }

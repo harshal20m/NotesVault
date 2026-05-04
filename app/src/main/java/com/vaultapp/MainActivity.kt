@@ -14,8 +14,10 @@ import androidx.navigation.compose.rememberNavController
 import com.vaultapp.data.local.PreferencesManager
 import com.vaultapp.data.model.AppTheme
 import com.vaultapp.service.NotificationHelper
+import com.vaultapp.service.UpdateManager
 import com.vaultapp.ui.Screen
 import com.vaultapp.ui.VaultNavGraph
+import com.vaultapp.ui.components.VaultToastHost
 import com.vaultapp.ui.theme.VaultTheme
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -39,12 +41,14 @@ class MainActivity : FragmentActivity() {
             val isLoaded  by vm.isLoaded.collectAsStateWithLifecycle()
 
             VaultTheme(appTheme = appTheme) {
-                // FIX: only render nav graph after prefs are loaded
-                // prevents Setup screen flashing on every launch
-                if (isLoaded) {
-                    val navController = rememberNavController()
-                    val start = if (isSetup) Screen.Lock.route else Screen.Setup.route
-                    VaultNavGraph(navController = navController, startDestination = start)
+                VaultToastHost {
+                    // FIX: only render nav graph after prefs are loaded
+                    // prevents Setup screen flashing on every launch
+                    if (isLoaded) {
+                        val navController = rememberNavController()
+                        val start = if (isSetup) Screen.Lock.route else Screen.Setup.route
+                        VaultNavGraph(navController = navController, startDestination = start)
+                    }
                 }
             }
         }
@@ -52,7 +56,10 @@ class MainActivity : FragmentActivity() {
 }
 
 @HiltViewModel
-class MainViewModel @Inject constructor(private val prefs: PreferencesManager) : ViewModel() {
+class MainViewModel @Inject constructor(
+    private val prefs: PreferencesManager,
+    private val updateManager: UpdateManager
+) : ViewModel() {
     val appTheme        = prefs.appTheme       .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), AppTheme.MIDNIGHT)
     val isSetupComplete = prefs.isSetupComplete.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
 
@@ -67,6 +74,9 @@ class MainViewModel @Inject constructor(private val prefs: PreferencesManager) :
                 _isLoaded.value = true
                 return@collect  // only need first emission
             }
+        }
+        viewModelScope.launch {
+            updateManager.checkForUpdates()
         }
     }
 }
