@@ -11,6 +11,7 @@ import com.vaultapp.data.repository.NoteRepository
 import com.vaultapp.data.repository.PasswordRepository
 import com.vaultapp.service.UpdateManager
 import com.vaultapp.util.CryptoManager
+import com.vaultapp.util.CryptoManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -179,6 +180,7 @@ class SettingsViewModel @Inject constructor(
     val lockTimeout       = prefs.lockTimeout  .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), LockTimeout.IMMEDIATELY)
     val appTheme          = prefs.appTheme     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), AppTheme.MIDNIGHT)
     val recoveryEmail     = prefs.recoveryEmail.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
+    val pinHash           = prefs.pinHash.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
     val gridColumns       = prefs.gridColumns  .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 2)
 
     fun setBiometrics(v: Boolean)      = viewModelScope.launch { prefs.setBiometrics(v) }
@@ -187,6 +189,7 @@ class SettingsViewModel @Inject constructor(
     fun setTheme(t: AppTheme)          = viewModelScope.launch { prefs.setTheme(t) }
     fun setGridColumns(c: Int)         = viewModelScope.launch { prefs.setGridColumns(c) }
     fun setRecoveryEmail(e: String)    = viewModelScope.launch { prefs.setRecoveryEmail(e) }
+    fun changePin(newPin: String)      = viewModelScope.launch { prefs.savePin(CryptoManager.hashPin(newPin)) }
 
     fun checkForUpdates() = viewModelScope.launch {
         updateManager.checkForUpdates(force = true)

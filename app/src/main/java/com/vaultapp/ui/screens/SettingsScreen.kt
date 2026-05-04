@@ -77,6 +77,7 @@ import com.vaultapp.ui.components.ToastManager
 import com.vaultapp.ui.theme.toVaultColors
 import com.vaultapp.ui.theme.vaultColors
 import com.vaultapp.ui.viewmodel.SettingsViewModel
+import com.vaultapp.util.CryptoManager
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -93,9 +94,15 @@ fun SettingsScreen(
     val lockTimeout by viewModel.lockTimeout.collectAsStateWithLifecycle()
     val currentTheme by viewModel.appTheme.collectAsStateWithLifecycle()
     val recovEmail by viewModel.recoveryEmail.collectAsStateWithLifecycle()
+    val pinHash by viewModel.pinHash.collectAsStateWithLifecycle()
     var showTimeoutPicker by remember { mutableStateOf(false) }
+    var showPinDialog by remember { mutableStateOf(false) }
     var showRecoveryEmailDialog by remember { mutableStateOf(false) }
     var emailDraft by remember(recovEmail) { mutableStateOf(recovEmail) }
+    var oldPin by remember { mutableStateOf("") }
+    var newPin by remember { mutableStateOf("") }
+    var confirmPin by remember { mutableStateOf("") }
+    var pinError by remember { mutableStateOf("") }
     Scaffold(
         containerColor = vc.background,
         topBar = {
@@ -135,7 +142,11 @@ fun SettingsScreen(
                     title = "Change PIN",
                     subtitle = "Update your unlock PIN"
                 ) {
-                    ToastManager.info("PIN change coming soon")
+                    oldPin = ""
+                    newPin = ""
+                    confirmPin = ""
+                    pinError = ""
+                    showPinDialog = true
                 }
                 SettingsSwitchRow(
                     icon = Icons.Outlined.Fingerprint,
@@ -318,6 +329,38 @@ fun SettingsScreen(
                 TextButton(onClick = { showRecoveryEmailDialog = false }) {
                     Text("Cancel", color = vc.onSurfaceVariant)
                 }
+            }
+        )
+    }
+    if (showPinDialog) {
+        AlertDialog(
+            onDismissRequest = { showPinDialog = false },
+            containerColor = vc.surface,
+            title = { Text("Change PIN", color = vc.onBackground) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(value = oldPin, onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) oldPin = it }, label = { Text("Current PIN") }, singleLine = true)
+                    OutlinedTextField(value = newPin, onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) newPin = it }, label = { Text("New PIN") }, singleLine = true)
+                    OutlinedTextField(value = confirmPin, onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) confirmPin = it }, label = { Text("Confirm new PIN") }, singleLine = true)
+                    if (pinError.isNotEmpty()) Text(pinError, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    when {
+                        oldPin.length != 6 || newPin.length != 6 || confirmPin.length != 6 -> pinError = "PIN must be 6 digits"
+                        pinHash != null && CryptoManager.hashPin(oldPin) != pinHash -> pinError = "Current PIN is incorrect"
+                        newPin != confirmPin -> pinError = "New PINs do not match"
+                        else -> {
+                            viewModel.changePin(newPin)
+                            showPinDialog = false
+                            ToastManager.success("PIN changed successfully")
+                        }
+                    }
+                }) { Text("Save", color = vc.primary) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPinDialog = false }) { Text("Cancel", color = vc.onSurfaceVariant) }
             }
         )
     }
