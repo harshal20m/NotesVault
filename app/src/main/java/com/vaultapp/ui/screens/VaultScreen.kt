@@ -213,6 +213,7 @@ fun VaultScreen(
 }
 
 // ── Grid card ──────────────────────────────────────────────────────────────────
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors, categoryColor: Color, onReveal: suspend () -> String, onCopy: () -> Unit, onClick: () -> Unit, onLongClick: () -> Unit) {
     var revealed by remember { mutableStateOf(false) }
@@ -273,6 +274,7 @@ private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.Vau
 }
 
 // ── List card ──────────────────────────────────────────────────────────────────
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PasswordListCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors, categoryColor: Color, onReveal: suspend () -> String, onCopy: () -> Unit, onClick: () -> Unit, onLongClick: () -> Unit) {
     var revealed by remember { mutableStateOf(false) }
