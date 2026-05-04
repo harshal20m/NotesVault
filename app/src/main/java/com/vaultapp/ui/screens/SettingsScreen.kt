@@ -53,6 +53,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -92,6 +94,8 @@ fun SettingsScreen(
     val currentTheme by viewModel.appTheme.collectAsStateWithLifecycle()
     val recovEmail by viewModel.recoveryEmail.collectAsStateWithLifecycle()
     var showTimeoutPicker by remember { mutableStateOf(false) }
+    var showRecoveryEmailDialog by remember { mutableStateOf(false) }
+    var emailDraft by remember(recovEmail) { mutableStateOf(recovEmail) }
     Scaffold(
         containerColor = vc.background,
         topBar = {
@@ -154,6 +158,8 @@ fun SettingsScreen(
                     title = "Recovery email",
                     subtitle = recovEmail.ifEmpty { "Not set — tap to add" }
                 ) {
+                    emailDraft = recovEmail
+                    showRecoveryEmailDialog = true
                 }
             }
             SettingsSection("Updates") {
@@ -227,12 +233,14 @@ fun SettingsScreen(
                     title = "Version",
                     subtitle = "1.0.0 · Kotlin + Compose"
                 ) {
+                    ToastManager.info("You are on version 1.0.0")
                 }
                 SettingsRow(
                     icon = Icons.Outlined.PrivacyTip,
                     title = "Privacy",
                     subtitle = "Fully offline · AES-256-GCM · No telemetry"
                 ) {
+                    ToastManager.info("Your data stays on this device and is never uploaded.")
                 }
             }
             Spacer(modifier = Modifier.height(100.dp))
@@ -284,6 +292,33 @@ fun SettingsScreen(
                 }
             },
             confirmButton = {}
+        )
+    }
+    if (showRecoveryEmailDialog) {
+        AlertDialog(
+            onDismissRequest = { showRecoveryEmailDialog = false },
+            containerColor = vc.surface,
+            title = { Text("Recovery email", color = vc.onBackground) },
+            text = {
+                OutlinedTextField(
+                    value = emailDraft,
+                    onValueChange = { emailDraft = it },
+                    singleLine = true,
+                    label = { Text("Email") }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.setRecoveryEmail(emailDraft.trim())
+                    showRecoveryEmailDialog = false
+                    ToastManager.success("Recovery email updated")
+                }) { Text("Save", color = vc.primary) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRecoveryEmailDialog = false }) {
+                    Text("Cancel", color = vc.onSurfaceVariant)
+                }
+            }
         )
     }
 }
