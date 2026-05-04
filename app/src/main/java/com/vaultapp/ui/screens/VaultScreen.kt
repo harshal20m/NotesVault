@@ -24,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vaultapp.data.model.PasswordCategory
 import com.vaultapp.data.model.PasswordEntry
 import com.vaultapp.data.model.PasswordStrength
+import com.vaultapp.data.model.NoteColor
 import com.vaultapp.ui.components.ToastManager
 import com.vaultapp.ui.theme.vaultColors
 import com.vaultapp.ui.viewmodel.VaultViewModel
@@ -314,12 +315,12 @@ private fun categoryColorFor(
         runCatching { return Color(android.graphics.Color.parseColor(hex)) }
     }
     return when (category) {
-    PasswordCategory.SOCIAL -> Color(0xFFFCE4EC)
-    PasswordCategory.FINANCE -> Color(0xFFE8F5E9)
-    PasswordCategory.ENTERTAINMENT -> Color(0xFFE3F2FD)
-    PasswordCategory.WORK -> Color(0xFFEDE7F6)
-    PasswordCategory.SHOPPING -> Color(0xFFFFF8E1)
-    PasswordCategory.OTHER -> Color(0xFFF5F5F5)
+    PasswordCategory.SOCIAL -> NoteColor.LIGHT_PINK.toCardColor(vc)
+    PasswordCategory.FINANCE -> NoteColor.LIGHT_GREEN.toCardColor(vc)
+    PasswordCategory.ENTERTAINMENT -> NoteColor.LIGHT_BLUE.toCardColor(vc)
+    PasswordCategory.WORK -> NoteColor.PURPLE.toCardColor(vc)
+    PasswordCategory.SHOPPING -> NoteColor.LIGHT_YELLOW.toCardColor(vc)
+    PasswordCategory.OTHER -> NoteColor.DEFAULT.toCardColor(vc)
 }
 }
 
