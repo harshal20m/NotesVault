@@ -110,6 +110,13 @@ fun VaultScreen(
                         border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selCat == cat, selectedBorderColor = Color.Transparent, borderColor = vc.outline))
                 }
             }
+            var showCategoryStyle by remember { mutableStateOf(false) }
+            TextButton(onClick = { showCategoryStyle = !showCategoryStyle }, modifier = Modifier.padding(horizontal = 8.dp)) {
+                Text(if (showCategoryStyle) "Hide category colors" else "Manage category colors", color = vc.primary, fontSize = 12.sp)
+            }
+            if (showCategoryStyle) {
+                Text("Category colors are auto-applied (leave blank = default).", color = vc.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 14.dp))
+            }
 
             if (display.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -137,10 +144,11 @@ fun VaultScreen(
                             PasswordGridCard(
                                 entry   = pw,
                                 vc      = vc,
+                                categoryColor = categoryColorFor(pw.category, vc),
+                                onReveal = { viewModel.getDecryptedPassword(pw.id).orEmpty() },
                                 onCopy  = { scope.launch {
                                     val plain = viewModel.getDecryptedPassword(pw.id) ?: ""
                                     clipboard.setText(AnnotatedString(plain))
-                                    ToastManager.copied()
                                 }},
                                 onClick = { onPasswordClick(pw.id) }
                             )
@@ -160,10 +168,11 @@ fun VaultScreen(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
                             items.forEach { pw ->
                                 PasswordListCard(entry = pw, vc = vc,
+                                    categoryColor = categoryColorFor(pw.category, vc),
+                                    onReveal = { viewModel.getDecryptedPassword(pw.id).orEmpty() },
                                     onCopy = { scope.launch {
                                         val plain = viewModel.getDecryptedPassword(pw.id) ?: ""
                                         clipboard.setText(AnnotatedString(plain))
-                                        ToastManager.copied()
                                     }},
                                     onClick = { onPasswordClick(pw.id) }
                                 )
@@ -178,12 +187,16 @@ fun VaultScreen(
 
 // ── Grid card ──────────────────────────────────────────────────────────────────
 @Composable
-private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors, onCopy: () -> Unit, onClick: () -> Unit) {
+private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors, categoryColor: Color, onReveal: suspend () -> String, onCopy: () -> Unit, onClick: () -> Unit) {
     var revealed by remember { mutableStateOf(false) }
+    var copied by remember { mutableStateOf(false) }
+    var plainPassword by remember { mutableStateOf("••••••••") }
+    val scope = rememberCoroutineScope()
+    val bgColor = categoryColor
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape    = RoundedCornerShape(18.dp),
-        colors   = CardDefaults.cardColors(containerColor = vc.surface),
+        colors   = CardDefaults.cardColors(containerColor = bgColor),
         border   = BorderStroke(0.5.dp, vc.outline)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -192,7 +205,12 @@ private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.Vau
                     Text(entry.title.firstOrNull()?.uppercase() ?: "?", color = vc.primary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = { revealed = !revealed }, modifier = Modifier.size(28.dp)) {
+                IconButton(onClick = {
+                    scope.launch {
+                        if (!revealed) plainPassword = onReveal()
+                        revealed = !revealed
+                    }
+                }, modifier = Modifier.size(28.dp)) {
                     Icon(if (revealed) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, null, tint = vc.onSurfaceVariant, modifier = Modifier.size(16.dp))
                 }
             }
@@ -201,7 +219,7 @@ private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.Vau
             if (entry.username.isNotEmpty()) Text(entry.username, color = vc.onSurfaceVariant, fontSize = 11.sp, maxLines = 1)
             Spacer(Modifier.height(6.dp))
             Text(
-                if (revealed) "••••••••" else "••••••••",
+                if (revealed) plainPassword else "••••••••",
                 color = vc.primary.copy(.7f), fontSize = 12.sp, letterSpacing = 2.sp
             )
             // Strength bar
@@ -214,11 +232,14 @@ private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.Vau
             Spacer(Modifier.height(8.dp))
             // Copy button
             Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(vc.primaryContainer)
-                .clickable(onClick = onCopy).padding(horizontal = 10.dp, vertical = 6.dp),
+                .clickable(onClick = {
+                    onCopy()
+                    copied = true
+                }).padding(horizontal = 10.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.ContentCopy, null, tint = vc.primary, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Copy", color = vc.primary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text(if (copied) "Copied" else "Copy", color = vc.primary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -226,10 +247,13 @@ private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.Vau
 
 // ── List card ──────────────────────────────────────────────────────────────────
 @Composable
-private fun PasswordListCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors, onCopy: () -> Unit, onClick: () -> Unit) {
+private fun PasswordListCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors, categoryColor: Color, onReveal: suspend () -> String, onCopy: () -> Unit, onClick: () -> Unit) {
     var revealed by remember { mutableStateOf(false) }
+    var copied by remember { mutableStateOf(false) }
+    var plainPassword by remember { mutableStateOf("••••••••") }
+    val scope = rememberCoroutineScope()
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
-        .clip(RoundedCornerShape(14.dp)).background(vc.surface).clickable(onClick = onClick).padding(12.dp),
+        .clip(RoundedCornerShape(14.dp)).background(categoryColor).clickable(onClick = onClick).padding(12.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(42.dp).clip(RoundedCornerShape(12.dp)).background(vc.primaryContainer), contentAlignment = Alignment.Center) {
             Text(entry.title.firstOrNull()?.uppercase() ?: "?", color = vc.primary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -238,7 +262,7 @@ private fun PasswordListCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.Vau
         Column(modifier = Modifier.weight(1f)) {
             Text(entry.title, color = vc.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             if (entry.username.isNotEmpty()) Text(entry.username, color = vc.onSurfaceVariant, fontSize = 12.sp)
-            Text(if (revealed) "••••••••" else "••••••••", color = vc.primary.copy(.7f), fontSize = 12.sp, letterSpacing = 2.sp)
+            Text(if (revealed) plainPassword else "••••••••", color = vc.primary.copy(.7f), fontSize = 12.sp, letterSpacing = 2.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 3.dp)) {
                 repeat(4) { i ->
                     Box(Modifier.width(20.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(
@@ -248,13 +272,25 @@ private fun PasswordListCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.Vau
                 Text(entry.passwordStrength.label, color = vc.onSurfaceVariant, fontSize = 10.sp)
             }
         }
-        IconButton(onClick = { revealed = !revealed }, modifier = Modifier.size(36.dp)) {
+        IconButton(onClick = {
+            scope.launch {
+                if (!revealed) plainPassword = onReveal()
+                revealed = !revealed
+            }
+        }, modifier = Modifier.size(36.dp)) {
             Icon(if (revealed) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, null, tint = vc.onSurfaceVariant, modifier = Modifier.size(18.dp))
         }
-        IconButton(onClick = onCopy, modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Outlined.ContentCopy, null, tint = vc.onSurfaceVariant, modifier = Modifier.size(18.dp))
-        }
+        TextButton(onClick = { onCopy(); copied = true }) { Text(if (copied) "Copied" else "Copy", color = vc.primary, fontSize = 11.sp) }
     }
+}
+
+private fun categoryColorFor(category: PasswordCategory, vc: com.vaultapp.ui.theme.VaultColors): Color = when (category) {
+    PasswordCategory.SOCIAL -> vc.noteCard1
+    PasswordCategory.FINANCE -> vc.noteCard4
+    PasswordCategory.ENTERTAINMENT -> vc.noteCard3
+    PasswordCategory.WORK -> vc.noteCard5
+    PasswordCategory.SHOPPING -> vc.noteCard2
+    PasswordCategory.OTHER -> vc.surface
 }
 
 private fun strengthColor(s: PasswordStrength) = when (s) {

@@ -40,6 +40,7 @@ import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Update
+import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -98,6 +99,7 @@ fun SettingsScreen(
     var showTimeoutPicker by remember { mutableStateOf(false) }
     var showPinDialog by remember { mutableStateOf(false) }
     var showRecoveryEmailDialog by remember { mutableStateOf(false) }
+    var showDeveloperDialog by remember { mutableStateOf(false) }
     var emailDraft by remember(recovEmail) { mutableStateOf(recovEmail) }
     var oldPin by remember { mutableStateOf("") }
     var newPin by remember { mutableStateOf("") }
@@ -247,6 +249,13 @@ fun SettingsScreen(
                     ToastManager.info("You are on version 1.0.0")
                 }
                 SettingsRow(
+                    icon = Icons.Outlined.Face,
+                    title = "About Developer",
+                    subtitle = "Built with care, coffee and cute vibes ✨"
+                ) {
+                    showDeveloperDialog = true
+                }
+                SettingsRow(
                     icon = Icons.Outlined.PrivacyTip,
                     title = "Privacy",
                     subtitle = "Fully offline · AES-256-GCM · No telemetry"
@@ -362,6 +371,15 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(onClick = { showPinDialog = false }) { Text("Cancel", color = vc.onSurfaceVariant) }
             }
+        )
+    }
+    if (showDeveloperDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeveloperDialog = false },
+            containerColor = vc.surface,
+            title = { Text("About Developer 👩‍💻", color = vc.onBackground) },
+            text = { Text("Hey! I made this app with lots of care, calm nights, and tiny happy cameos 🐾✨\n\nI love building secure, beautiful tools that feel cozy and useful every day.\n\nThanks for using Vault 💖", color = vc.onSurface) },
+            confirmButton = { TextButton(onClick = { showDeveloperDialog = false }) { Text("Aww, nice!", color = vc.primary) } }
         )
     }
 }
