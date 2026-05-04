@@ -1,5 +1,6 @@
 package com.vaultapp.ui.screens
 
+import android.content.Intent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,6 +19,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,6 +33,7 @@ import com.vaultapp.ui.viewmodel.PasswordEditViewModel
 import com.vaultapp.util.CryptoManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import kotlin.math.max
 import javax.inject.Inject
 
@@ -123,9 +126,17 @@ class SetupViewModel @Inject constructor(val prefs: PreferencesManager) : ViewMo
 
 // ── Recover Screen ────────────────────────────────────────────────────────────
 @Composable
-fun RecoverScreen(onRecovered: () -> Unit, onBack: () -> Unit) {
+fun RecoverScreen(onRecovered: () -> Unit, onBack: () -> Unit, vm: RecoverViewModel = hiltViewModel()) {
     val vc = MaterialTheme.vaultColors
+    val ctx = LocalContext.current
     var email by remember { mutableStateOf("") }
+    var code by remember { mutableStateOf("") }
+    var newPin by remember { mutableStateOf("") }
+    var confirmPin by remember { mutableStateOf("") }
+    var sent by remember { mutableStateOf(false) }
+    var err by remember { mutableStateOf("") }
+    val savedRecoveryEmail by vm.recoveryEmail.collectAsStateWithLifecycle("")
+    var sentCode by remember { mutableStateOf("") }
     Column(
         modifier = Modifier.fillMaxSize().background(vc.background).padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
@@ -138,13 +149,84 @@ fun RecoverScreen(onRecovered: () -> Unit, onBack: () -> Unit) {
         VaultOutlinedField("Recovery email", email, { email = it }, vc)
         Spacer(Modifier.height(24.dp))
         Button(
-            onClick = { ToastManager.info("Recovery email sent") },
+            onClick = {
+                if (email.isBlank()) {
+                    err = "Please enter recovery email"
+                    return@Button
+                }
+                if (savedRecoveryEmail.isBlank()) {
+                    err = "No recovery email is set yet"
+                    return@Button
+                }
+                if (!email.trim().equals(savedRecoveryEmail.trim(), ignoreCase = true)) {
+                    err = "Entered email doesn't match your setup recovery email"
+                    return@Button
+                }
+                val codeValue = (100000..999999).random().toString()
+                vm.saveRecoveryCode(codeValue)
+                sentCode = codeValue
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "message/rfc822"
+                    putExtra(Intent.EXTRA_EMAIL, arrayOf(email.trim()))
+                    putExtra(Intent.EXTRA_SUBJECT, "Vault recovery code")
+                    putExtra(Intent.EXTRA_TEXT, "Your Vault recovery code is: $codeValue\nUse this code to reset your PIN.")
+                }
+                runCatching { ctx.startActivity(Intent.createChooser(intent, "Send recovery email")) }
+                sent = true
+                err = ""
+                ToastManager.info("Recovery draft opened in your mail app")
+            },
             modifier = Modifier.fillMaxWidth().height(52.dp),
             colors   = ButtonDefaults.buttonColors(containerColor = vc.primary),
             shape    = RoundedCornerShape(14.dp)
         ) { Text("Send Recovery Code", fontSize = 16.sp) }
+        if (sent) {
+            Text("Recovery code: $sentCode", color = vc.onSurfaceVariant, fontSize = 12.sp)
+            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(12.dp))
+            VaultOutlinedField("Recovery code", code, { if (it.length <= 6 && it.all(Char::isDigit)) code = it }, vc)
+            Spacer(Modifier.height(8.dp))
+            VaultOutlinedField("New PIN", newPin, { if (it.length <= 6 && it.all(Char::isDigit)) newPin = it }, vc, isPassword = true)
+            Spacer(Modifier.height(8.dp))
+            VaultOutlinedField("Confirm PIN", confirmPin, { if (it.length <= 6 && it.all(Char::isDigit)) confirmPin = it }, vc, isPassword = true)
+            if (err.isNotEmpty()) Text(err, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            Spacer(Modifier.height(10.dp))
+            Button(
+                onClick = {
+                    when {
+                        code.length != 6 -> err = "Enter valid 6-digit code"
+                        newPin.length != 6 || confirmPin.length != 6 -> err = "PIN must be 6 digits"
+                        newPin != confirmPin -> err = "PINs do not match"
+                        !vm.verifyRecoveryCode(code) -> err = "Invalid code"
+                        else -> {
+                            vm.resetPin(newPin)
+                            ToastManager.success("PIN reset successful")
+                            onRecovered()
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = vc.primary),
+                shape = RoundedCornerShape(12.dp)
+            ) { Text("Verify & Reset PIN") }
+        }
         TextButton(onClick = onBack) { Text("Back to login", color = vc.primary) }
     }
+}
+
+@HiltViewModel
+class RecoverViewModel @Inject constructor(private val prefs: PreferencesManager) : ViewModel() {
+    private var cachedCodeHash: String? = null
+    val recoveryEmail = prefs.recoveryEmail
+    fun saveRecoveryCode(code: String) = viewModelScope.launch {
+        cachedCodeHash = CryptoManager.hashPin(code)
+        prefs.setRecoveryCodeHash(cachedCodeHash!!)
+    }
+    fun verifyRecoveryCode(code: String): Boolean {
+        val h = cachedCodeHash ?: kotlinx.coroutines.runBlocking { prefs.dataStore.data.first()[PreferencesManager.RECOVERY_CODE_HASH] }
+        return !h.isNullOrBlank() && CryptoManager.verifyPin(code, h)
+    }
+    fun resetPin(pin: String) = viewModelScope.launch { prefs.savePin(CryptoManager.hashPin(pin)) }
 }
 
 // ── Password Edit Screen ──────────────────────────────────────────────────────
