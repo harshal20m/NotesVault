@@ -31,6 +31,7 @@ import com.vaultapp.ui.viewmodel.PasswordEditViewModel
 import com.vaultapp.util.CryptoManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import kotlin.math.max
 import javax.inject.Inject
 
 // ── Setup Screen ──────────────────────────────────────────────────────────────
@@ -156,6 +157,7 @@ fun PasswordEditScreen(
 ) {
     val vc = MaterialTheme.vaultColors
     var showPw by remember { mutableStateOf(false) }
+    var showGenerateConfirm by remember { mutableStateOf(false) }
     LaunchedEffect(passwordId) { viewModel.loadEntry(passwordId) }
     val strength = viewModel.computeStrength(viewModel.password)
 
@@ -198,8 +200,7 @@ fun PasswordEditScreen(
                             Icon(if (showPw) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, null, tint = vc.onSurfaceVariant)
                         }
                         IconButton(onClick = {
-                            viewModel.password = viewModel.generatePassword()
-                            ToastManager.success("Strong password generated")
+                            showGenerateConfirm = true
                         }) {
                             Icon(Icons.Outlined.Refresh, "Generate", tint = vc.primary)
                         }
@@ -280,9 +281,49 @@ fun PasswordEditScreen(
             )
             Text("Saved per category. Leave blank to use default app color.", color = vc.onSurfaceVariant, fontSize = 11.sp)
 
+            if (viewModel.passwordHistory.isNotEmpty()) {
+                Text("Password history", color = vc.onSurfaceVariant, fontSize = 12.sp)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    viewModel.passwordHistory.forEach { item ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(vc.surface).padding(horizontal = 10.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("••••••••", color = vc.onBackground, fontSize = 12.sp)
+                            Text(relativeTime(item.changedAt), color = vc.onSurfaceVariant, fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+
             VaultOutlinedField("Notes (optional)", viewModel.notes, { viewModel.notes = it }, vc, minLines = 3)
             Spacer(Modifier.height(32.dp))
         }
+    }
+    if (showGenerateConfirm) {
+        AlertDialog(
+            onDismissRequest = { showGenerateConfirm = false },
+            title = { Text("Generate new password?") },
+            text = { Text("Your current password will be replaced. Continue?") },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.recordCurrentPasswordInHistory()
+                    viewModel.password = viewModel.generatePassword()
+                    ToastManager.success("Strong password generated")
+                    showGenerateConfirm = false
+                }, colors = ButtonDefaults.buttonColors(containerColor = vc.primary)) { Text("Generate") }
+            },
+            dismissButton = { TextButton(onClick = { showGenerateConfirm = false }) { Text("Cancel") } }
+        )
+    }
+}
+
+private fun relativeTime(timeMs: Long): String {
+    val days = max(0, ((System.currentTimeMillis() - timeMs) / (1000 * 60 * 60 * 24)).toInt())
+    return when {
+        days == 0 -> "Today"
+        days == 1 -> "1 day ago"
+        else -> "$days days ago"
     }
 }
 

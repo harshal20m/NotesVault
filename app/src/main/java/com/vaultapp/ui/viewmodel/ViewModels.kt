@@ -144,6 +144,7 @@ class PasswordEditViewModel @Inject constructor(
     var category by mutableStateOf(PasswordCategory.OTHER)
     var notes    by mutableStateOf("")
     var selectedCategoryColorHex by mutableStateOf("")
+    var passwordHistory by mutableStateOf(listOf<PasswordHistoryItem>())
 
     init {
         viewModelScope.launch {
@@ -195,7 +196,20 @@ class PasswordEditViewModel @Inject constructor(
     fun setSelectedCategoryColor(hex: String) {
         selectedCategoryColorHex = hex
     }
+
+    fun recordCurrentPasswordInHistory() {
+        val current = password.trim()
+        if (current.isBlank()) return
+        passwordHistory = (listOf(PasswordHistoryItem(current, System.currentTimeMillis())) + passwordHistory)
+            .distinctBy { it.password }
+            .take(10)
+    }
 }
+
+data class PasswordHistoryItem(
+    val password: String,
+    val changedAt: Long
+)
 
 // ── SettingsViewModel ─────────────────────────────────────────────────────────
 @HiltViewModel
