@@ -22,6 +22,7 @@ data class Note(
     val mediaUris: List<String> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
+    val isArchived: Boolean = false,
     val isDeleted: Boolean = false,
     val reminderAt: Long? = null
 )
@@ -54,6 +55,7 @@ data class PasswordEntry(
     val encryptedPassword: String,  // AES encrypted
     val website: String = "",
     val category: PasswordCategory = PasswordCategory.OTHER,
+    val cardColorHex: String = "",
     val notes: String = "",
     val isFavorite: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),

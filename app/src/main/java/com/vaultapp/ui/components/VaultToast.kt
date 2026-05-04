@@ -46,6 +46,7 @@ object ToastManager {
     fun success(msg: String) = show(msg, ToastType.SUCCESS, Icons.Outlined.CheckCircle)
     fun error(msg: String)   = show(msg, ToastType.ERROR,   Icons.Outlined.ErrorOutline)
     fun info(msg: String)    = show(msg, ToastType.INFO,    Icons.Outlined.Info)
+    fun warning(msg: String) = show(msg, ToastType.WARNING, Icons.Outlined.WarningAmber)
     fun copied()             = show("Copied to clipboard", ToastType.SUCCESS, Icons.Outlined.ContentCopy)
     fun saved()              = show("Note saved", ToastType.SUCCESS, Icons.Outlined.CheckCircle)
     fun deleted()            = show("Moved to trash", ToastType.INFO, Icons.Outlined.Delete)
@@ -109,17 +110,17 @@ fun VaultToastHost(content: @Composable () -> Unit) {
 private fun ToastPill(toast: ToastMessage) {
     val vc = MaterialTheme.vaultColors
     val (bg, fg) = when (toast.type) {
-        ToastType.SUCCESS -> Pair(Color(0xFF1A3A28), Color(0xFF6EE4C0))
-        ToastType.ERROR   -> Pair(Color(0xFF3A1010), Color(0xFFFF8080))
-        ToastType.WARNING -> Pair(Color(0xFF3A2800), Color(0xFFFFCC66))
-        ToastType.INFO    -> Pair(vc.surfaceVariant,  vc.onSurface)
+        ToastType.SUCCESS -> Pair(Color(0xFF1E2A24), Color(0xFFCDEBDD))
+        ToastType.ERROR   -> Pair(Color(0xFF2E1E1E), Color(0xFFF0C7C7))
+        ToastType.WARNING -> Pair(Color(0xFF2F2A20), Color(0xFFF2DFB3))
+        ToastType.INFO    -> Pair(vc.surfaceVariant.copy(alpha = 0.94f),  vc.onSurface)
     }
     Row(
         modifier = Modifier
-            .shadow(12.dp, RoundedCornerShape(24.dp))
-            .clip(RoundedCornerShape(24.dp))
+            .shadow(8.dp, RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(bg)
-            .padding(horizontal = 18.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {

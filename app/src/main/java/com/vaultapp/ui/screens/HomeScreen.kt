@@ -1,5 +1,6 @@
 package com.vaultapp.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.staggeredgrid.*
@@ -30,6 +31,8 @@ import com.vaultapp.ui.theme.vaultColors
 import com.vaultapp.ui.viewmodel.HomeViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -42,17 +45,22 @@ fun HomeScreen(
 ) {
     val vc            = MaterialTheme.vaultColors
     val notes         by viewModel.notes.collectAsStateWithLifecycle()
+    val archivedNotes by viewModel.archivedNotes.collectAsStateWithLifecycle()
     val searchQuery   by viewModel.searchQuery.collectAsStateWithLifecycle()
     val gridColumns   by viewModel.gridColumns.collectAsStateWithLifecycle()
     val passwordCount by viewModel.passwordCount.collectAsStateWithLifecycle()
     var selectedFilter by remember { mutableStateOf("All") }
-    val filters = remember { listOf("All", "Notes", "Pinned", "Media", "Locked") }
+    var selectedNote by remember { mutableStateOf<Note?>(null) }
+    val deletingNoteIds = remember { mutableStateListOf<Long>() }
+    val uiScope = rememberCoroutineScope()
+    val filters = remember { listOf("All", "Notes", "Pinned", "Media", "Locked", "Archived") }
 
-    val displayNotes = remember(notes, selectedFilter) {
+    val displayNotes = remember(notes, archivedNotes, selectedFilter) {
         when (selectedFilter) {
             "Pinned" -> notes.filter { it.isPinned }
             "Media"  -> notes.filter { it.mediaUris.isNotEmpty() }
             "Locked" -> notes.filter { it.isLocked }
+            "Archived" -> archivedNotes
             else     -> notes
         }
     }
@@ -152,8 +160,8 @@ fun HomeScreen(
                             onClick  = { selectedFilter = f },
                             label    = { Text(f, fontSize = 12.sp) },
                             colors   = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = vc.primary,
-                                selectedLabelColor     = Color.White,
+                                selectedContainerColor = vc.primaryContainer,
+                                selectedLabelColor     = vc.primary,
                                 containerColor         = vc.surface,
                                 labelColor             = vc.onSurfaceVariant
                             ),
@@ -203,19 +211,75 @@ fun HomeScreen(
                         modifier              = Modifier.fillMaxSize()
                     ) {
                         items(displayNotes, key = { it.id }) { note ->
-                            NoteCard(
-                                note        = note,
-                                onClick     = { onNoteClick(note.id) },
-                                onLongClick = {
-                                    viewModel.togglePin(note.id, !note.isPinned)
-                                    if (note.isPinned) ToastManager.unpinned() else ToastManager.pinned()
-                                }
-                            )
+                            AnimatedVisibility(
+                                visible = !deletingNoteIds.contains(note.id),
+                                enter = fadeIn(),
+                                exit = fadeOut() + scaleOut(targetScale = 0.6f)
+                            ) {
+                                NoteCard(
+                                    note        = note,
+                                    onClick     = { onNoteClick(note.id) },
+                                    onLongClick = {
+                                        selectedNote = note
+                                    }
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+    }
+    fun avengersDeleteNote(noteId: Long) {
+        if (deletingNoteIds.contains(noteId)) return
+        deletingNoteIds.add(noteId)
+        uiScope.launch {
+            delay(450)
+            viewModel.deleteNote(noteId)
+            ToastManager.deleted()
+            deletingNoteIds.remove(noteId)
+        }
+    }
+    selectedNote?.let { note ->
+        AlertDialog(
+            onDismissRequest = { selectedNote = null },
+            containerColor = vc.surface,
+            title = { Text("📝 Note Actions", color = vc.onBackground) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FilledTonalButton(
+                        onClick = {
+                        viewModel.togglePin(note.id, !note.isPinned)
+                        if (note.isPinned) ToastManager.unpinned() else ToastManager.pinned()
+                        selectedNote = null
+                    },
+                        colors = ButtonDefaults.filledTonalButtonColors(containerColor = vc.primaryContainer)
+                    ) { Text(if (note.isPinned) "📌 Unpin note" else "📌 Pin note", color = vc.primary) }
+                    FilledTonalButton(onClick = {
+                        if (note.isArchived) {
+                            viewModel.unarchiveNote(note.id)
+                            ToastManager.info("Note unarchived")
+                        } else {
+                            viewModel.archiveNote(note.id)
+                            ToastManager.info("Note archived")
+                        }
+                        selectedNote = null
+                    }, colors = ButtonDefaults.filledTonalButtonColors(containerColor = vc.primaryContainer)) {
+                        Text(if (note.isArchived) "📂 Unarchive note" else "📦 Archive note", color = vc.primary)
+                    }
+                    FilledTonalButton(onClick = {
+                        avengersDeleteNote(note.id)
+                        selectedNote = null
+                    }, colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.error.copy(.15f))) {
+                        Text("🗑 Delete note", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { selectedNote = null }) { Text("Cancel", color = vc.onSurfaceVariant) }
+            }
+        )
     }
 }
 
@@ -235,6 +299,7 @@ fun NoteCard(note: Note, onClick: () -> Unit, onLongClick: () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(bgColor)
+            .border(1.dp, vc.outline.copy(alpha = 0.85f), RoundedCornerShape(18.dp))
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(14.dp)
     ) {
@@ -243,7 +308,7 @@ fun NoteCard(note: Note, onClick: () -> Unit, onLongClick: () -> Unit) {
             if (note.title.isNotEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (note.isPinned) {
-                        Icon(Icons.Default.PushPin, null, tint = vc.primary.copy(.7f), modifier = Modifier.size(13.dp))
+                        Icon(Icons.Default.PushPin, null, tint = vc.onSurface, modifier = Modifier.size(13.dp))
                         Spacer(Modifier.width(4.dp))
                     }
                     Text(
@@ -256,10 +321,10 @@ fun NoteCard(note: Note, onClick: () -> Unit, onLongClick: () -> Unit) {
                         modifier   = Modifier.weight(1f)
                     )
                     if (note.isLocked) {
-                        Icon(Icons.Default.Lock, null, tint = vc.primary, modifier = Modifier.size(13.dp))
+                        Icon(Icons.Default.Lock, null, tint = vc.onSurface, modifier = Modifier.size(13.dp))
                     }
                     if (note.reminderAt != null) {
-                        Icon(Icons.Default.Alarm, null, tint = vc.primary.copy(.7f), modifier = Modifier.size(13.dp))
+                        Icon(Icons.Default.Alarm, null, tint = vc.onSurface, modifier = Modifier.size(13.dp))
                     }
                 }
             }

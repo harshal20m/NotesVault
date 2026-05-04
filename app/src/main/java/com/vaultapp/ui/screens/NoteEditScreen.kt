@@ -2,6 +2,7 @@ package com.vaultapp.ui.screens
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import android.content.Intent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
@@ -77,6 +78,12 @@ fun NoteEditScreen(
         var tooLarge = 0
         uris.forEach { uri ->
             if (FileHelper.isSizeValid(ctx, uri, 2)) {
+                runCatching {
+                    ctx.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                }
                 viewModel.addMedia(uri.toString())
                 added++
             } else {
@@ -257,18 +264,6 @@ fun NoteEditScreen(
                         inner()
                     }
                 )
-                // Mode badge
-                if (rts.editorMode == EditorMode.CHECKLIST) {
-                    Row(
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 2.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(vc.primaryContainer)
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text("✓ Checklist mode", color = vc.primary, fontSize = 11.sp)
-                    }
-                }
                 // Rich text editor - FIX: uses Column internally, NOT LazyColumn, so no infinite height crash
                 RichTextEditor(
                     state           = rts,
