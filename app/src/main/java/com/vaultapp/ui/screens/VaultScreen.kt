@@ -29,7 +29,7 @@ import com.vaultapp.ui.theme.vaultColors
 import com.vaultapp.ui.viewmodel.VaultViewModel
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun VaultScreen(
     onPasswordClick: (Long) -> Unit,
@@ -42,6 +42,7 @@ fun VaultScreen(
     val categoryColors by viewModel.categoryColors.collectAsStateWithLifecycle()
     val searchQ   by viewModel.searchQuery.collectAsStateWithLifecycle()
     var selCat    by remember { mutableStateOf<PasswordCategory?>(null) }
+    var selectedPassword by remember { mutableStateOf<PasswordEntry?>(null) }
     // FIX: grid view for vault - 2 cols
     var useGrid   by remember { mutableStateOf(true) }
     val scope     = rememberCoroutineScope()
@@ -151,7 +152,8 @@ fun VaultScreen(
                                     val plain = viewModel.getDecryptedPassword(pw.id) ?: ""
                                     clipboard.setText(AnnotatedString(plain))
                                 }},
-                                onClick = { onPasswordClick(pw.id) }
+                                onClick = { onPasswordClick(pw.id) },
+                                onLongClick = { selectedPassword = pw }
                             )
                         }
                     }
@@ -175,7 +177,8 @@ fun VaultScreen(
                                         val plain = viewModel.getDecryptedPassword(pw.id) ?: ""
                                         clipboard.setText(AnnotatedString(plain))
                                     }},
-                                    onClick = { onPasswordClick(pw.id) }
+                                    onClick = { onPasswordClick(pw.id) },
+                                    onLongClick = { selectedPassword = pw }
                                 )
                             }
                         }
@@ -184,18 +187,40 @@ fun VaultScreen(
             }
         }
     }
+    selectedPassword?.let { pw ->
+        AlertDialog(
+            onDismissRequest = { selectedPassword = null },
+            title = { Text("Password actions") },
+            text = { Text(pw.title) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.toggleFavorite(pw.id, !pw.isFavorite)
+                    selectedPassword = null
+                }) { Text(if (pw.isFavorite) "Unpin" else "Pin") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        viewModel.deletePassword(pw)
+                        selectedPassword = null
+                    }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = { selectedPassword = null }) { Text("Cancel") }
+                }
+            }
+        )
+    }
 }
 
 // ── Grid card ──────────────────────────────────────────────────────────────────
 @Composable
-private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors, categoryColor: Color, onReveal: suspend () -> String, onCopy: () -> Unit, onClick: () -> Unit) {
+private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors, categoryColor: Color, onReveal: suspend () -> String, onCopy: () -> Unit, onClick: () -> Unit, onLongClick: () -> Unit) {
     var revealed by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
     var plainPassword by remember { mutableStateOf("••••••••") }
     val scope = rememberCoroutineScope()
     val bgColor = categoryColor
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape    = RoundedCornerShape(18.dp),
         colors   = CardDefaults.cardColors(containerColor = bgColor),
         border   = BorderStroke(0.5.dp, vc.outline)
@@ -248,13 +273,13 @@ private fun PasswordGridCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.Vau
 
 // ── List card ──────────────────────────────────────────────────────────────────
 @Composable
-private fun PasswordListCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors, categoryColor: Color, onReveal: suspend () -> String, onCopy: () -> Unit, onClick: () -> Unit) {
+private fun PasswordListCard(entry: PasswordEntry, vc: com.vaultapp.ui.theme.VaultColors, categoryColor: Color, onReveal: suspend () -> String, onCopy: () -> Unit, onClick: () -> Unit, onLongClick: () -> Unit) {
     var revealed by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
     var plainPassword by remember { mutableStateOf("••••••••") }
     val scope = rememberCoroutineScope()
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
-        .clip(RoundedCornerShape(14.dp)).background(categoryColor).clickable(onClick = onClick).padding(12.dp),
+        .clip(RoundedCornerShape(14.dp)).background(categoryColor).combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(12.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(42.dp).clip(RoundedCornerShape(12.dp)).background(vc.primaryContainer), contentAlignment = Alignment.Center) {
             Text(entry.title.firstOrNull()?.uppercase() ?: "?", color = vc.primary, fontSize = 18.sp, fontWeight = FontWeight.Bold)

@@ -123,6 +123,7 @@ class VaultViewModel @Inject constructor(
 
     fun onSearchQuery(q: String) { _searchQuery.value = q }
     fun toggleFavorite(id: Long, f: Boolean) = viewModelScope.launch { repo.setFavorite(id, f) }
+    fun deletePassword(entry: PasswordEntry) = viewModelScope.launch { repo.deletePassword(entry) }
 
     suspend fun getDecryptedPassword(id: Long): String? = repo.getDecryptedPassword(id)
 }
