@@ -46,6 +46,7 @@ object ToastManager {
     fun success(msg: String) = show(msg, ToastType.SUCCESS, Icons.Outlined.CheckCircle)
     fun error(msg: String)   = show(msg, ToastType.ERROR,   Icons.Outlined.ErrorOutline)
     fun info(msg: String)    = show(msg, ToastType.INFO,    Icons.Outlined.Info)
+    fun warning(msg: String) = show(msg, ToastType.WARNING, Icons.Outlined.WarningAmber)
     fun copied()             = show("Copied to clipboard", ToastType.SUCCESS, Icons.Outlined.ContentCopy)
     fun saved()              = show("Note saved", ToastType.SUCCESS, Icons.Outlined.CheckCircle)
     fun deleted()            = show("Moved to trash", ToastType.INFO, Icons.Outlined.Delete)

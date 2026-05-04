@@ -91,8 +91,16 @@ fun NoteMediaGrid(mediaUris: List<String>, onRemove: (String) -> Unit, onFullScr
     if (mediaUris.isEmpty()) return
     val vc = MaterialTheme.vaultColors
     val ctx = LocalContext.current
+    val validUris = remember(mediaUris) {
+        mediaUris.filter { uriString ->
+            runCatching {
+                ctx.contentResolver.openInputStream(Uri.parse(uriString))?.use { true } ?: false
+            }.getOrDefault(false)
+        }
+    }
+    if (validUris.isEmpty()) return
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        mediaUris.chunked(3).forEach { row ->
+        validUris.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 row.forEach { uriString ->
                     val uri = Uri.parse(uriString)

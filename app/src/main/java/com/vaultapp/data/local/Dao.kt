@@ -8,11 +8,11 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface NoteDao {
 
-    @Query("SELECT * FROM notes WHERE isDeleted = 0 ORDER BY isPinned DESC, updatedAt DESC")
+    @Query("SELECT * FROM notes WHERE isDeleted = 0 AND isArchived = 0 ORDER BY isPinned DESC, updatedAt DESC")
     fun getAllNotes(): Flow<List<Note>>
 
     @Query("""
-        SELECT * FROM notes WHERE isDeleted = 0
+        SELECT * FROM notes WHERE isDeleted = 0 AND isArchived = 0
         AND (title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%')
         ORDER BY isPinned DESC, updatedAt DESC
     """)
@@ -26,6 +26,8 @@ interface NoteDao {
 
     @Query("SELECT * FROM notes WHERE isDeleted = 1 ORDER BY updatedAt DESC")
     fun getDeletedNotes(): Flow<List<Note>>
+    @Query("SELECT * FROM notes WHERE isDeleted = 0 AND isArchived = 1 ORDER BY updatedAt DESC")
+    fun getArchivedNotes(): Flow<List<Note>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNote(note: Note): Long
@@ -44,6 +46,8 @@ interface NoteDao {
 
     @Query("UPDATE notes SET isPinned = :pinned WHERE id = :id")
     suspend fun setPinned(id: Long, pinned: Boolean)
+    @Query("UPDATE notes SET isArchived = :archived, updatedAt = :time WHERE id = :id")
+    suspend fun setArchived(id: Long, archived: Boolean, time: Long = System.currentTimeMillis())
 
     @Query("SELECT COUNT(*) FROM notes WHERE isDeleted = 0")
     fun getNoteCount(): Flow<Int>

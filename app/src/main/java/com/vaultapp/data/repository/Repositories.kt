@@ -16,6 +16,7 @@ class NoteRepository @Inject constructor(private val dao: NoteDao) {
     fun searchNotes(query: String): Flow<List<Note>> = dao.searchNotes(query)
     fun getPinnedNotes(): Flow<List<Note>> = dao.getPinnedNotes()
     fun getDeletedNotes(): Flow<List<Note>> = dao.getDeletedNotes()
+    fun getArchivedNotes(): Flow<List<Note>> = dao.getArchivedNotes()
     fun getNoteCount(): Flow<Int> = dao.getNoteCount()
 
     suspend fun getNoteById(id: Long): Note? = dao.getNoteById(id)
@@ -25,6 +26,7 @@ class NoteRepository @Inject constructor(private val dao: NoteDao) {
     suspend fun permanentlyDelete(id: Long) = dao.permanentlyDeleteNote(id)
     suspend fun emptyTrash() = dao.emptyTrash()
     suspend fun setPinned(id: Long, pinned: Boolean) = dao.setPinned(id, pinned)
+    suspend fun setArchived(id: Long, archived: Boolean) = dao.setArchived(id, archived)
 }
 
 @Singleton

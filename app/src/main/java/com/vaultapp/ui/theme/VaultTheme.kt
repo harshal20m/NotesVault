@@ -1,4 +1,5 @@
 package com.vaultapp.ui.theme
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
@@ -15,19 +16,35 @@ val MaterialTheme.vaultColors: VaultColors
     @Composable get() = LocalVaultColors.current
 @Composable
 fun VaultTheme(appTheme: AppTheme = AppTheme.MIDNIGHT, content: @Composable () -> Unit) {
-    val vc = appTheme.toVaultColors()
-    val cs = lightColorScheme(
-        primary = vc.primary,
-        primaryContainer = vc.primaryContainer,
-        background = vc.background,
-        surface = vc.surface,
-        surfaceVariant = vc.surfaceVariant,
-        onPrimary = vc.onPrimary,
-        onBackground = vc.onBackground,
-        onSurface = vc.onSurface,
-        onSurfaceVariant = vc.onSurfaceVariant,
-        outline = vc.outline
-    )
+    val isDarkMode = isSystemInDarkTheme()
+    val vc = appTheme.toVaultColors(isDarkMode)
+    val cs = if (isDarkMode) {
+        darkColorScheme(
+            primary = vc.primary,
+            primaryContainer = vc.primaryContainer,
+            background = vc.background,
+            surface = vc.surface,
+            surfaceVariant = vc.surfaceVariant,
+            onPrimary = vc.onPrimary,
+            onBackground = vc.onBackground,
+            onSurface = vc.onSurface,
+            onSurfaceVariant = vc.onSurfaceVariant,
+            outline = vc.outline
+        )
+    } else {
+        lightColorScheme(
+            primary = vc.primary,
+            primaryContainer = vc.primaryContainer,
+            background = vc.background,
+            surface = vc.surface,
+            surfaceVariant = vc.surfaceVariant,
+            onPrimary = vc.onPrimary,
+            onBackground = vc.onBackground,
+            onSurface = vc.onSurface,
+            onSurfaceVariant = vc.onSurfaceVariant,
+            outline = vc.outline
+        )
+    }
     CompositionLocalProvider(LocalVaultColors provides vc) {
         MaterialTheme(
             colorScheme = cs,
@@ -36,7 +53,7 @@ fun VaultTheme(appTheme: AppTheme = AppTheme.MIDNIGHT, content: @Composable () -
         )
     }
 }
-fun AppTheme.toVaultColors() = when (this) {
+fun AppTheme.toVaultColors(isDarkMode: Boolean = false) = if (isDarkMode) toDarkVaultColors() else when (this) {
     AppTheme.MIDNIGHT -> midnight()
     AppTheme.CLOUD    -> cloud()
     AppTheme.FOREST   -> forest()
@@ -50,6 +67,26 @@ fun AppTheme.toVaultColors() = when (this) {
     AppTheme.CHERRY   -> cherry()
     AppTheme.ARCTIC   -> arctic()
 }
+private fun AppTheme.toDarkVaultColors() = VaultColors(
+    background = Color.Black,
+    surface = Color.Black,
+    surfaceVariant = c("#121212"),
+    primary = c("#B8C0FF"),
+    primaryContainer = c("#1F1F26"),
+    onPrimary = Color.Black,
+    onBackground = Color.White,
+    onSurface = Color.White,
+    onSurfaceVariant = c("#BBBBBB"),
+    outline = c("#30303A"),
+    noteCard1 = c("#090909"),
+    noteCard2 = c("#0A0A0A"),
+    noteCard3 = c("#0B0B0B"),
+    noteCard4 = c("#0C0C0C"),
+    noteCard5 = c("#0D0D0D"),
+    noteCard6 = c("#0E0E0E"),
+    noteCard7 = c("#0F0F0F"),
+    noteCard8 = c("#101010")
+)
 private fun c(hex: String) = Color(android.graphics.Color.parseColor(hex))
 fun midnight() = VaultColors(
     c("#F7F5FF"), c("#FFFFFF"), c("#EFEAFE"),

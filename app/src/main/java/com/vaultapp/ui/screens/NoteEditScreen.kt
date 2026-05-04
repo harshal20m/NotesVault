@@ -2,6 +2,7 @@ package com.vaultapp.ui.screens
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import android.content.Intent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
@@ -77,6 +78,12 @@ fun NoteEditScreen(
         var tooLarge = 0
         uris.forEach { uri ->
             if (FileHelper.isSizeValid(ctx, uri, 2)) {
+                runCatching {
+                    ctx.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                }
                 viewModel.addMedia(uri.toString())
                 added++
             } else {

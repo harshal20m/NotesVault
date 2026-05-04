@@ -2,6 +2,7 @@ package com.vaultapp.ui.viewmodel
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -44,6 +45,8 @@ class HomeViewModel @Inject constructor(
     val notes: StateFlow<List<Note>> = _searchQuery
         .flatMapLatest { q -> if (q.isEmpty()) noteRepo.getAllNotes() else noteRepo.searchNotes(q) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val archivedNotes: StateFlow<List<Note>> = noteRepo.getArchivedNotes()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val passwordCount = passwordRepo.getPasswordCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
@@ -52,6 +55,9 @@ class HomeViewModel @Inject constructor(
 
     fun onSearchQuery(q: String) { _searchQuery.value = q }
     fun togglePin(id: Long, pinned: Boolean) = viewModelScope.launch { noteRepo.setPinned(id, pinned) }
+    fun archiveNote(id: Long) = viewModelScope.launch { noteRepo.setArchived(id, true) }
+    fun unarchiveNote(id: Long) = viewModelScope.launch { noteRepo.setArchived(id, false) }
+    fun deleteNote(id: Long) = viewModelScope.launch { noteRepo.deleteNote(id) }
     fun toggleGridColumns() = viewModelScope.launch {
         prefs.setGridColumns(if (prefs.gridColumns.first() == 2) 1 else 2)
     }
@@ -101,7 +107,10 @@ class NoteEditViewModel @Inject constructor(private val repo: NoteRepository) : 
 
 // ── VaultViewModel ────────────────────────────────────────────────────────────
 @HiltViewModel
-class VaultViewModel @Inject constructor(private val repo: PasswordRepository) : ViewModel() {
+class VaultViewModel @Inject constructor(
+    private val repo: PasswordRepository,
+    private val prefs: PreferencesManager
+) : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
@@ -109,16 +118,22 @@ class VaultViewModel @Inject constructor(private val repo: PasswordRepository) :
     val passwords: StateFlow<List<PasswordEntry>> = _searchQuery
         .flatMapLatest { q -> if (q.isEmpty()) repo.getAllPasswords() else repo.searchPasswords(q) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val categoryColors = prefs.getCategoryColors()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     fun onSearchQuery(q: String) { _searchQuery.value = q }
     fun toggleFavorite(id: Long, f: Boolean) = viewModelScope.launch { repo.setFavorite(id, f) }
+    fun deletePassword(entry: PasswordEntry) = viewModelScope.launch { repo.deletePassword(entry) }
 
     suspend fun getDecryptedPassword(id: Long): String? = repo.getDecryptedPassword(id)
 }
 
 // ── PasswordEditViewModel ─────────────────────────────────────────────────────
 @HiltViewModel
-class PasswordEditViewModel @Inject constructor(private val repo: PasswordRepository) : ViewModel() {
+class PasswordEditViewModel @Inject constructor(
+    private val repo: PasswordRepository,
+    private val prefs: PreferencesManager
+) : ViewModel() {
     private val _entry = MutableStateFlow<PasswordEntry?>(null)
     val entry: StateFlow<PasswordEntry?> = _entry
 
@@ -128,6 +143,16 @@ class PasswordEditViewModel @Inject constructor(private val repo: PasswordReposi
     var website  by mutableStateOf("")
     var category by mutableStateOf(PasswordCategory.OTHER)
     var notes    by mutableStateOf("")
+    var selectedCategoryColorHex by mutableStateOf("")
+    var passwordHistory by mutableStateOf(listOf<PasswordHistoryItem>())
+
+    init {
+        viewModelScope.launch {
+            snapshotFlow { category }.flatMapLatest { prefs.getCategoryColor(it) }.collect {
+                selectedCategoryColorHex = it
+            }
+        }
+    }
 
     fun loadEntry(id: Long) = viewModelScope.launch {
         if (id == -1L) { _entry.value = null; return@launch }
@@ -164,9 +189,27 @@ class PasswordEditViewModel @Inject constructor(private val repo: PasswordReposi
             passwordStrength = computeStrength(password)
         )
         if (e.id == 0L) repo.savePassword(e) else repo.updatePassword(e)
+        prefs.setCategoryColor(category, selectedCategoryColorHex.trim())
         onDone()
     }
+
+    fun setSelectedCategoryColor(hex: String) {
+        selectedCategoryColorHex = hex
+    }
+
+    fun recordCurrentPasswordInHistory() {
+        val current = password.trim()
+        if (current.isBlank()) return
+        passwordHistory = (listOf(PasswordHistoryItem(current, System.currentTimeMillis())) + passwordHistory)
+            .distinctBy { it.password }
+            .take(10)
+    }
 }
+
+data class PasswordHistoryItem(
+    val password: String,
+    val changedAt: Long
+)
 
 // ── SettingsViewModel ─────────────────────────────────────────────────────────
 @HiltViewModel
@@ -179,6 +222,7 @@ class SettingsViewModel @Inject constructor(
     val lockTimeout       = prefs.lockTimeout  .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), LockTimeout.IMMEDIATELY)
     val appTheme          = prefs.appTheme     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), AppTheme.MIDNIGHT)
     val recoveryEmail     = prefs.recoveryEmail.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
+    val pinHash           = prefs.pinHash.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
     val gridColumns       = prefs.gridColumns  .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 2)
 
     fun setBiometrics(v: Boolean)      = viewModelScope.launch { prefs.setBiometrics(v) }
@@ -187,6 +231,7 @@ class SettingsViewModel @Inject constructor(
     fun setTheme(t: AppTheme)          = viewModelScope.launch { prefs.setTheme(t) }
     fun setGridColumns(c: Int)         = viewModelScope.launch { prefs.setGridColumns(c) }
     fun setRecoveryEmail(e: String)    = viewModelScope.launch { prefs.setRecoveryEmail(e) }
+    fun changePin(newPin: String)      = viewModelScope.launch { prefs.savePin(CryptoManager.hashPin(newPin)) }
 
     fun checkForUpdates() = viewModelScope.launch {
         updateManager.checkForUpdates(force = true)

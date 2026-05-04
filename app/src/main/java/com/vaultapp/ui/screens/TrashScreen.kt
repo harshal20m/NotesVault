@@ -128,11 +128,12 @@ fun TrashScreen(
 @Composable
 private fun TrashCard(note: Note, vc: com.vaultapp.ui.theme.VaultColors, onRestore: () -> Unit, onDelete: () -> Unit) {
     val bg = note.color.toCardColor(vc)
+    val displayContent = remember(note.content) { extractPlainText(note.content) }
     val df = SimpleDateFormat("MMM d", Locale.getDefault())
     Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(bg.copy(.55f))) {
         Column(modifier = Modifier.padding(12.dp)) {
             if (note.title.isNotEmpty()) Text(note.title, color = vc.onSurface.copy(.7f), fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (note.content.isNotEmpty()) { Spacer(Modifier.height(4.dp)); Text(note.content, color = vc.onSurface.copy(.5f), fontSize = 11.sp, maxLines = 4, overflow = TextOverflow.Ellipsis) }
+            if (displayContent.isNotEmpty()) { Spacer(Modifier.height(4.dp)); Text(displayContent, color = vc.onSurface.copy(.5f), fontSize = 11.sp, maxLines = 4, overflow = TextOverflow.Ellipsis) }
             Spacer(Modifier.height(8.dp))
             Text("Deleted ${df.format(Date(note.updatedAt))}", color = vc.onSurfaceVariant.copy(.5f), fontSize = 10.sp)
         }
