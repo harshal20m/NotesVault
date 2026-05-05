@@ -80,21 +80,30 @@ class BackupViewModel @Inject constructor(
     fun export(context: android.content.Context, password: String) = viewModelScope.launch {
         isExporting = true
         hideExportDialog()
-        val notes = noteRepo.getAllNotes().first()
-        val pwds  = pwRepo.getAllPasswords().first()
-        BackupManager.exportBackup(context, notes, pwds, password)
-            .onSuccess { uri ->
-                prefs.setLastBackupAt(System.currentTimeMillis())
-                lastResult = "✅ Backup saved successfully"
-                context.startActivity(Intent.createChooser(
-                    Intent(Intent.ACTION_SEND).apply {
-                        type = "application/octet-stream"; putExtra(Intent.EXTRA_STREAM, uri)
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }, "Save backup"
-                ))
-            }
-            .onFailure { lastResult = "❌ Export failed: ${it.message}" }
-        isExporting = false
+        try {
+            val notes = noteRepo.getAllNotes().first() ?: emptyList()
+            val pwds  = pwRepo.getAllPasswords().first() ?: emptyList()
+            BackupManager.exportBackup(context, notes, pwds, password)
+                .onSuccess { uri ->
+                    prefs.setLastBackupAt(System.currentTimeMillis())
+                    lastResult = "✅ Backup saved successfully"
+                    runCatching {
+                        context.startActivity(Intent.createChooser(
+                            Intent(Intent.ACTION_SEND).apply {
+                                type = "application/octet-stream"; putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }, "Save backup"
+                        ))
+                    }
+                }
+                .onFailure { error ->
+                    lastResult = "❌ Export failed: ${error.message ?: "Unknown error"}"
+                }
+        } catch (e: Exception) {
+            lastResult = "❌ Export failed: ${e.message ?: "Error reading data"}"
+        } finally {
+            isExporting = false
+        }
     }
 
     fun import(context: android.content.Context, password: String) = viewModelScope.launch {
@@ -103,9 +112,20 @@ class BackupViewModel @Inject constructor(
         hideImportDialog()
         BackupManager.importBackup(context, uri, password)
             .onSuccess { backup ->
-                backup.notes.forEach { noteRepo.saveNote(it.copy(id = 0)) }
-                backup.passwords.forEach { pwRepo.savePassword(it.copy(id = 0)) }
-                lastResult = "✅ Imported ${backup.notes.size} notes · ${backup.passwords.size} passwords"
+                try {
+                    val notes = backup.notes ?: emptyList()
+                    val passwords = backup.passwords ?: emptyList()
+                    
+                    notes.forEach { note ->
+                        runCatching { noteRepo.saveNote(note.copy(id = 0)) }
+                    }
+                    passwords.forEach { pwd ->
+                        runCatching { pwRepo.savePassword(pwd.copy(id = 0)) }
+                    }
+                    lastResult = "✅ Imported ${notes.size} notes · ${passwords.size} passwords"
+                } catch (e: Exception) {
+                    lastResult = "❌ Import failed: ${e.message ?: "Error saving imported data"}"
+                }
             }
             .onFailure { error ->
                 val message = error.message ?: "Unknown error occurred"

@@ -26,13 +26,25 @@ object BackupManager {
 
     suspend fun exportBackup(
         context: Context,
-        notes: List<Note>,
-        passwords: List<PasswordEntry>,
+        notes: List<Note>?,
+        passwords: List<PasswordEntry>?,
         password: String
     ): Result<Uri> = withContext(Dispatchers.IO) {
         runCatching {
-            val backup = VaultBackup(notes = notes, passwords = passwords)
+            if (password.isBlank()) {
+                throw IllegalArgumentException("Password cannot be empty")
+            }
+            
+            val backup = VaultBackup(
+                notes = notes ?: emptyList(),
+                passwords = passwords ?: emptyList()
+            )
             val json = gson.toJson(backup)
+            
+            if (json.isNullOrBlank()) {
+                throw IllegalStateException("Failed to serialize backup data")
+            }
+            
             // Encrypt with password for portability
             val encrypted = CryptoManager.encryptWithPassword(json, password)
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -53,6 +65,10 @@ object BackupManager {
         password: String
     ): Result<VaultBackup> = withContext(Dispatchers.IO) {
         runCatching {
+            if (password.isBlank()) {
+                throw IllegalArgumentException("Password cannot be empty")
+            }
+            
             // Validate file name if available
             val fileName = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
@@ -67,7 +83,9 @@ object BackupManager {
 
             // Read file content
             val encrypted = context.contentResolver.openInputStream(uri)?.use { stream ->
-                BufferedReader(InputStreamReader(stream)).readText()
+                BufferedReader(InputStreamReader(stream)).use { reader ->
+                    reader.readText()
+                }
             } ?: throw IllegalStateException("Could not read file. Please check file permissions")
 
             if (encrypted.isBlank()) {
@@ -81,11 +99,23 @@ object BackupManager {
                 throw IllegalStateException("Decryption failed. Wrong password or corrupted backup file")
             }
 
+            if (json.isBlank()) {
+                throw IllegalStateException("Decrypted content is empty")
+            }
+
             // Parse JSON
             try {
-                gson.fromJson(json, VaultBackup::class.java) ?: throw IllegalArgumentException("Invalid backup format")
+                val backup = gson.fromJson(json, VaultBackup::class.java)
+                if (backup == null) {
+                    throw IllegalArgumentException("Invalid backup format")
+                }
+                // Ensure lists are not null
+                backup.copy(
+                    notes = backup.notes ?: emptyList(),
+                    passwords = backup.passwords ?: emptyList()
+                )
             } catch (e: Exception) {
-                throw IllegalArgumentException("Invalid backup file structure. File may be corrupted")
+                throw IllegalArgumentException("Invalid backup file structure. File may be corrupted: ${e.message}")
             }
         }
     }

@@ -68,25 +68,32 @@ class RichTextState {
         
         isUndoRedoOperation = true
         
-        // Save current state to redo stack
-        val currentSnapshot = EditorSnapshot(
-            text = textFieldValue.text,
-            spans = spans.toList(),
-            checklistItems = checklistItems.toList(),
-            selection = textFieldValue.selection
-        )
-        redoStack.add(currentSnapshot)
-        
-        // Restore previous state
-        val snapshot = undoStack.removeAt(undoStack.lastIndex)
-        textFieldValue = TextFieldValue(snapshot.text, snapshot.selection)
-        spans.clear()
-        spans.addAll(snapshot.spans)
-        checklistItems.clear()
-        checklistItems.addAll(snapshot.checklistItems)
-        
-        isUndoRedoOperation = false
-        onContentChanged?.invoke(serializeToJson())
+        try {
+            // Save current state to redo stack
+            val currentSnapshot = EditorSnapshot(
+                text = textFieldValue.text,
+                spans = spans.toList(),
+                checklistItems = checklistItems.toList(),
+                selection = textFieldValue.selection
+            )
+            redoStack.add(currentSnapshot)
+            
+            // Restore previous state
+            val snapshot = undoStack.removeAt(undoStack.lastIndex)
+            textFieldValue = TextFieldValue(snapshot.text, snapshot.selection)
+            spans.clear()
+            if (snapshot.spans.isNotEmpty()) {
+                spans.addAll(snapshot.spans)
+            }
+            checklistItems.clear()
+            if (snapshot.checklistItems.isNotEmpty()) {
+                checklistItems.addAll(snapshot.checklistItems)
+            }
+            
+            onContentChanged?.invoke(serializeToJson())
+        } finally {
+            isUndoRedoOperation = false
+        }
     }
     
     fun redo() {
@@ -94,25 +101,32 @@ class RichTextState {
         
         isUndoRedoOperation = true
         
-        // Save current state to undo stack
-        val currentSnapshot = EditorSnapshot(
-            text = textFieldValue.text,
-            spans = spans.toList(),
-            checklistItems = checklistItems.toList(),
-            selection = textFieldValue.selection
-        )
-        undoStack.add(currentSnapshot)
-        
-        // Restore next state
-        val snapshot = redoStack.removeAt(redoStack.lastIndex)
-        textFieldValue = TextFieldValue(snapshot.text, snapshot.selection)
-        spans.clear()
-        spans.addAll(snapshot.spans)
-        checklistItems.clear()
-        checklistItems.addAll(snapshot.checklistItems)
-        
-        isUndoRedoOperation = false
-        onContentChanged?.invoke(serializeToJson())
+        try {
+            // Save current state to undo stack
+            val currentSnapshot = EditorSnapshot(
+                text = textFieldValue.text,
+                spans = spans.toList(),
+                checklistItems = checklistItems.toList(),
+                selection = textFieldValue.selection
+            )
+            undoStack.add(currentSnapshot)
+            
+            // Restore next state
+            val snapshot = redoStack.removeAt(redoStack.lastIndex)
+            textFieldValue = TextFieldValue(snapshot.text, snapshot.selection)
+            spans.clear()
+            if (snapshot.spans.isNotEmpty()) {
+                spans.addAll(snapshot.spans)
+            }
+            checklistItems.clear()
+            if (snapshot.checklistItems.isNotEmpty()) {
+                checklistItems.addAll(snapshot.checklistItems)
+            }
+            
+            onContentChanged?.invoke(serializeToJson())
+        } finally {
+            isUndoRedoOperation = false
+        }
     }
     
     fun buildAnnotatedString(): AnnotatedString = buildAnnotatedString {
