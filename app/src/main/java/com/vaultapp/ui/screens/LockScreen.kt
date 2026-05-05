@@ -84,7 +84,7 @@ fun LockScreen(
                     contentAlignment = Alignment.Center) { Text("🔐", fontSize = 38.sp) }
 
                 Spacer(Modifier.height(22.dp))
-                Text("Vault", color = vc.onBackground, fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
+                Text("Notes Vault", color = vc.onBackground, fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
                 Text("Enter your PIN to unlock", color = vc.onSurfaceVariant, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp, bottom = 40.dp))
 
                 // PIN dots

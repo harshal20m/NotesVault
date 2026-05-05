@@ -71,6 +71,32 @@ fun NoteEditScreen(
                 rts.loadFromJson(n.content)
         }
     }
+    
+    // Set up content change callback with auto-save
+    LaunchedEffect(Unit) {
+        rts.onContentChanged = { content ->
+            viewModel.onContent(content)
+        }
+    }
+    
+    // Auto-save every 2 seconds when content changes
+    LaunchedEffect(viewModel.title, viewModel.content) {
+        kotlinx.coroutines.delay(2000)
+        // Auto-save if there's any content
+        if (viewModel.title.isNotEmpty() || rts.textFieldValue.text.isNotEmpty() || (note?.mediaUris?.isNotEmpty() == true)) {
+            viewModel.saveNote()
+        }
+    }
+    
+    // Save on back press
+    DisposableEffect(Unit) {
+        onDispose {
+            if (viewModel.title.isNotEmpty() || rts.textFieldValue.text.isNotEmpty() || (note?.mediaUris?.isNotEmpty() == true)) {
+                viewModel.onContent(rts.serializeToJson())
+                viewModel.saveNote()
+            }
+        }
+    }
 
     // Updated picker for images and PDF
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -218,12 +244,47 @@ fun NoteEditScreen(
                     verticalAlignment     = Alignment.CenterVertically
                 ) {
                     val wc = rts.textFieldValue.text.trim().split("\\s+".toRegex()).count { it.isNotEmpty() }
-                    Text(
-                        "$wc words · ${note?.let { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()).format(Date(it.updatedAt)) } ?: ""}",
-                        color = vc.onSurfaceVariant, fontSize = 11.sp
-                    )
-                    TextButton(onClick = { save(); ToastManager.saved(); onBack() }) {
-                        Text("Save", color = vc.primary, fontWeight = FontWeight.Medium)
+                    Column {
+                        Text(
+                            "$wc words · ${note?.let { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()).format(Date(it.updatedAt)) } ?: ""}",
+                            color = vc.onSurfaceVariant, fontSize = 11.sp
+                        )
+                        Text(
+                            "Auto-saved",
+                            color = vc.onSurfaceVariant.copy(0.6f),
+                            fontSize = 10.sp
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (rts.canUndo() || rts.canRedo()) {
+                            IconButton(
+                                onClick = { rts.undo() },
+                                enabled = rts.canUndo(),
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Undo,
+                                    "Undo",
+                                    tint = if (rts.canUndo()) vc.primary else vc.onSurfaceVariant.copy(0.3f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = { rts.redo() },
+                                enabled = rts.canRedo(),
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Redo,
+                                    "Redo",
+                                    tint = if (rts.canRedo()) vc.primary else vc.onSurfaceVariant.copy(0.3f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                        TextButton(onClick = { save(); onBack() }) {
+                            Text("Done", color = vc.primary, fontWeight = FontWeight.Medium)
+                        }
                     }
                 }
             }

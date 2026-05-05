@@ -97,7 +97,7 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "Vault",
+                        "Notes Vault",
                         color      = vc.onBackground,
                         fontSize   = 28.sp,
                         fontWeight = FontWeight.Bold,

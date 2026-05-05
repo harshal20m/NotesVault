@@ -28,13 +28,13 @@ object BackupManager {
         context: Context,
         notes: List<Note>,
         passwords: List<PasswordEntry>,
-        pinHash: String
+        password: String
     ): Result<Uri> = withContext(Dispatchers.IO) {
         runCatching {
             val backup = VaultBackup(notes = notes, passwords = passwords)
             val json = gson.toJson(backup)
-            // Encrypt the entire JSON with the derived key
-            val encrypted = CryptoManager.encrypt(json)
+            // Encrypt with password for portability
+            val encrypted = CryptoManager.encryptWithPassword(json, password)
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
             val fileName = "vault_backup_$timestamp.vbk"
 
@@ -49,15 +49,44 @@ object BackupManager {
 
     suspend fun importBackup(
         context: Context,
-        uri: Uri
+        uri: Uri,
+        password: String
     ): Result<VaultBackup> = withContext(Dispatchers.IO) {
         runCatching {
+            // Validate file name if available
+            val fileName = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex >= 0) cursor.getString(nameIndex) else null
+                } else null
+            }
+            
+            if (fileName != null && !fileName.endsWith(".vbk")) {
+                throw IllegalArgumentException("Invalid file type. Please select a .vbk backup file")
+            }
+
+            // Read file content
             val encrypted = context.contentResolver.openInputStream(uri)?.use { stream ->
                 BufferedReader(InputStreamReader(stream)).readText()
-            } ?: throw IllegalStateException("Could not read file")
+            } ?: throw IllegalStateException("Could not read file. Please check file permissions")
 
-            val json = CryptoManager.decrypt(encrypted)
-            gson.fromJson(json, VaultBackup::class.java)
+            if (encrypted.isBlank()) {
+                throw IllegalArgumentException("File is empty or corrupted")
+            }
+
+            // Decrypt with password
+            val json = try {
+                CryptoManager.decryptWithPassword(encrypted, password)
+            } catch (e: Exception) {
+                throw IllegalStateException("Decryption failed. Wrong password or corrupted backup file")
+            }
+
+            // Parse JSON
+            try {
+                gson.fromJson(json, VaultBackup::class.java) ?: throw IllegalArgumentException("Invalid backup format")
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Invalid backup file structure. File may be corrupted")
+            }
         }
     }
 

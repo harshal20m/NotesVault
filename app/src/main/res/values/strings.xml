@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Vault</string>
+    <string name="app_name">Notes Vault</string>
     <string name="widget_description">Quick add notes and passwords</string>
 </resources>

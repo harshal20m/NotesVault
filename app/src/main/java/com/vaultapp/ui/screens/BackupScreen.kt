@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
@@ -53,12 +55,34 @@ class BackupViewModel @Inject constructor(
     var isExporting by mutableStateOf(false); private set
     var isImporting by mutableStateOf(false); private set
     var lastResult  by mutableStateOf<String?>(null)
+    var showExportPasswordDialog by mutableStateOf(false); private set
+    var showImportPasswordDialog by mutableStateOf(false); private set
+    private var pendingImportUri: android.net.Uri? = null
 
-    fun export(context: android.content.Context) = viewModelScope.launch {
+    fun showExportDialog() {
+        showExportPasswordDialog = true
+    }
+
+    fun hideExportDialog() {
+        showExportPasswordDialog = false
+    }
+
+    fun showImportDialog(uri: android.net.Uri) {
+        pendingImportUri = uri
+        showImportPasswordDialog = true
+    }
+
+    fun hideImportDialog() {
+        showImportPasswordDialog = false
+        pendingImportUri = null
+    }
+
+    fun export(context: android.content.Context, password: String) = viewModelScope.launch {
         isExporting = true
+        hideExportDialog()
         val notes = noteRepo.getAllNotes().first()
         val pwds  = pwRepo.getAllPasswords().first()
-        BackupManager.exportBackup(context, notes, pwds, "")
+        BackupManager.exportBackup(context, notes, pwds, password)
             .onSuccess { uri ->
                 prefs.setLastBackupAt(System.currentTimeMillis())
                 lastResult = "✅ Backup saved successfully"
@@ -73,15 +97,20 @@ class BackupViewModel @Inject constructor(
         isExporting = false
     }
 
-    fun import(context: android.content.Context, uri: android.net.Uri) = viewModelScope.launch {
+    fun import(context: android.content.Context, password: String) = viewModelScope.launch {
+        val uri = pendingImportUri ?: return@launch
         isImporting = true
-        BackupManager.importBackup(context, uri)
+        hideImportDialog()
+        BackupManager.importBackup(context, uri, password)
             .onSuccess { backup ->
                 backup.notes.forEach { noteRepo.saveNote(it.copy(id = 0)) }
                 backup.passwords.forEach { pwRepo.savePassword(it.copy(id = 0)) }
                 lastResult = "✅ Imported ${backup.notes.size} notes · ${backup.passwords.size} passwords"
             }
-            .onFailure { lastResult = "❌ Import failed: ${it.message}" }
+            .onFailure { error ->
+                val message = error.message ?: "Unknown error occurred"
+                lastResult = "❌ Import failed: $message"
+            }
         isImporting = false
     }
 
@@ -101,7 +130,7 @@ fun BackupScreen(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel(
     val result       = viewModel.lastResult
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { viewModel.import(ctx, it) }
+        uri?.let { viewModel.showImportDialog(it) }
     }
 
     Scaffold(
@@ -150,7 +179,7 @@ fun BackupScreen(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel(
 
             Text("Actions", color = vc.onSurfaceVariant, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
 
-            BkpCard(Icons.Outlined.CloudUpload, "Export Backup", "Save encrypted vault to your device", vc.primary, viewModel.isExporting, vc) { viewModel.export(ctx) }
+            BkpCard(Icons.Outlined.CloudUpload, "Export Backup", "Save encrypted vault to your device", vc.primary, viewModel.isExporting, vc) { viewModel.showExportDialog() }
             BkpCard(Icons.Outlined.CloudDownload, "Import Backup", "Restore from a .vbk backup file", Color(0xFF1D9E75), viewModel.isImporting, vc) { importLauncher.launch("*/*") }
 
             Text("Automation", color = vc.onSurfaceVariant, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
@@ -189,6 +218,83 @@ fun BackupScreen(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel(
             Spacer(Modifier.height(100.dp))
         }
     }
+
+    // Export Password Dialog
+    if (viewModel.showExportPasswordDialog) {
+        PasswordDialog(
+            title = "Set Backup Password",
+            message = "Enter a password to encrypt your backup. You'll need this password to restore the backup.",
+            onConfirm = { password -> viewModel.export(ctx, password) },
+            onDismiss = { viewModel.hideExportDialog() }
+        )
+    }
+
+    // Import Password Dialog
+    if (viewModel.showImportPasswordDialog) {
+        PasswordDialog(
+            title = "Enter Backup Password",
+            message = "Enter the password you used when creating this backup.",
+            onConfirm = { password -> viewModel.import(ctx, password) },
+            onDismiss = { viewModel.hideImportDialog() }
+        )
+    }
+}
+
+@Composable
+private fun PasswordDialog(
+    title: String,
+    message: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontWeight = FontWeight.SemiBold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(message, fontSize = 14.sp)
+                androidx.compose.material3.OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    visualTransformation = if (passwordVisible)
+                        androidx.compose.ui.text.input.VisualTransformation.None
+                    else
+                        androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                if (passwordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                                contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                            )
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.Button(
+                onClick = {
+                    if (password.isNotBlank()) {
+                        onConfirm(password)
+                    }
+                },
+                enabled = password.isNotBlank()
+            ) {
+                Text("Confirm")
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable

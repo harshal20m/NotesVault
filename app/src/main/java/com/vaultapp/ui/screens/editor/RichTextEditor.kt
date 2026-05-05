@@ -56,8 +56,8 @@ private fun TextEditor(
     BasicTextField(
         value          = state.textFieldValue,
         onValueChange  = { newVal ->
-            state.textFieldValue = newVal
-            onContentChange(newVal.text)
+            state.onTextChanged(newVal)
+            onContentChange(state.serializeToJson())
         },
         textStyle      = TextStyle(
             color      = vc.onSurface,
@@ -197,6 +197,13 @@ fun FormattingToolbar(
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Undo/Redo buttons
+            FmtBtn(Icons.Outlined.Undo, "Undo", false, vc, enabled = state.canUndo()) { state.undo() }
+            FmtBtn(Icons.Outlined.Redo, "Redo", false, vc, enabled = state.canRedo()) { state.redo() }
+            
+            // Divider
+            Box(modifier = Modifier.width(1.dp).height(20.dp).background(vc.outline.copy(0.3f)))
+            
             FmtBtn(Icons.Outlined.FormatBold,        "Bold",        state.isFormatActive(SpanType.BOLD),          vc) { state.toggleFormat(SpanType.BOLD) }
             FmtBtn(Icons.Outlined.FormatItalic,      "Italic",      state.isFormatActive(SpanType.ITALIC),        vc) { state.toggleFormat(SpanType.ITALIC) }
             FmtBtn(Icons.Outlined.FormatUnderlined,  "Underline",   state.isFormatActive(SpanType.UNDERLINE),     vc) { state.toggleFormat(SpanType.UNDERLINE) }
@@ -205,7 +212,7 @@ fun FormattingToolbar(
             FmtBtn(Icons.AutoMirrored.Outlined.FormatListBulleted, "List", false, vc) {
                 val cur = state.textFieldValue.selection.start
                 val t   = state.textFieldValue.text
-                state.textFieldValue = state.textFieldValue.copy(text = t.substring(0, cur) + "\n• " + t.substring(cur))
+                state.onTextChanged(state.textFieldValue.copy(text = t.substring(0, cur) + "\n• " + t.substring(cur)))
             }
             FmtBtn(Icons.Outlined.CheckBox, "Checklist", false, vc) { state.addChecklistItem() }
         }
@@ -242,16 +249,21 @@ fun ModeBtn(label: String = "", icon: ImageVector? = null, active: Boolean, vc: 
 }
 
 @Composable
-fun FmtBtn(icon: ImageVector, desc: String, active: Boolean, vc: com.vaultapp.ui.theme.VaultColors, onClick: () -> Unit) {
+fun FmtBtn(icon: ImageVector, desc: String, active: Boolean, vc: com.vaultapp.ui.theme.VaultColors, enabled: Boolean = true, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
             .background(if (active) vc.primaryContainer else Color.Transparent)
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(6.dp),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, desc, tint = if (active) vc.primary else vc.onSurfaceVariant, modifier = Modifier.size(19.dp))
+        Icon(
+            icon,
+            desc,
+            tint = if (!enabled) vc.onSurfaceVariant.copy(0.3f) else if (active) vc.primary else vc.onSurfaceVariant,
+            modifier = Modifier.size(19.dp)
+        )
     }
 }
 

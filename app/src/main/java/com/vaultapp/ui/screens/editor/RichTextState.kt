@@ -24,7 +24,97 @@ class RichTextState {
     var editorMode     by mutableStateOf(EditorMode.TEXT)
     // FIX: use mutableStateListOf not mutableStateSetOf (doesn't exist)
     val activeFormats  = mutableStateListOf<SpanType>()
+    
+    // Callback to notify when content changes (including formatting)
+    var onContentChanged: ((String) -> Unit)? = null
+    
+    // Undo/Redo stacks
+    private val undoStack = mutableListOf<EditorSnapshot>()
+    private val redoStack = mutableListOf<EditorSnapshot>()
+    private var isUndoRedoOperation = false
+    
+    data class EditorSnapshot(
+        val text: String,
+        val spans: List<TextSpan>,
+        val checklistItems: List<ChecklistItem>,
+        val selection: androidx.compose.ui.text.TextRange
+    )
+    
+    fun canUndo() = undoStack.isNotEmpty()
+    fun canRedo() = redoStack.isNotEmpty()
 
+    private fun saveSnapshot() {
+        if (isUndoRedoOperation) return
+        
+        val snapshot = EditorSnapshot(
+            text = textFieldValue.text,
+            spans = spans.toList(),
+            checklistItems = checklistItems.toList(),
+            selection = textFieldValue.selection
+        )
+        undoStack.add(snapshot)
+        
+        // Limit undo stack to 50 items
+        if (undoStack.size > 50) {
+            undoStack.removeAt(0)
+        }
+        
+        // Clear redo stack when new change is made
+        redoStack.clear()
+    }
+    
+    fun undo() {
+        if (undoStack.isEmpty()) return
+        
+        isUndoRedoOperation = true
+        
+        // Save current state to redo stack
+        val currentSnapshot = EditorSnapshot(
+            text = textFieldValue.text,
+            spans = spans.toList(),
+            checklistItems = checklistItems.toList(),
+            selection = textFieldValue.selection
+        )
+        redoStack.add(currentSnapshot)
+        
+        // Restore previous state
+        val snapshot = undoStack.removeAt(undoStack.lastIndex)
+        textFieldValue = TextFieldValue(snapshot.text, snapshot.selection)
+        spans.clear()
+        spans.addAll(snapshot.spans)
+        checklistItems.clear()
+        checklistItems.addAll(snapshot.checklistItems)
+        
+        isUndoRedoOperation = false
+        onContentChanged?.invoke(serializeToJson())
+    }
+    
+    fun redo() {
+        if (redoStack.isEmpty()) return
+        
+        isUndoRedoOperation = true
+        
+        // Save current state to undo stack
+        val currentSnapshot = EditorSnapshot(
+            text = textFieldValue.text,
+            spans = spans.toList(),
+            checklistItems = checklistItems.toList(),
+            selection = textFieldValue.selection
+        )
+        undoStack.add(currentSnapshot)
+        
+        // Restore next state
+        val snapshot = redoStack.removeAt(redoStack.lastIndex)
+        textFieldValue = TextFieldValue(snapshot.text, snapshot.selection)
+        spans.clear()
+        spans.addAll(snapshot.spans)
+        checklistItems.clear()
+        checklistItems.addAll(snapshot.checklistItems)
+        
+        isUndoRedoOperation = false
+        onContentChanged?.invoke(serializeToJson())
+    }
+    
     fun buildAnnotatedString(): AnnotatedString = buildAnnotatedString {
         append(textFieldValue.text)
         spans.forEach { span ->
@@ -43,6 +133,8 @@ class RichTextState {
     }
 
     fun toggleFormat(type: SpanType) {
+        saveSnapshot()
+        
         val sel = textFieldValue.selection
         if (sel.collapsed) {
             // toggle active format for typing
@@ -51,21 +143,45 @@ class RichTextState {
         }
         val existing = spans.firstOrNull { it.start == sel.start && it.end == sel.end && it.type == type }
         if (existing != null) spans.remove(existing) else spans.add(TextSpan(sel.start, sel.end, type))
+        
+        // Notify content changed
+        onContentChanged?.invoke(serializeToJson())
     }
 
     fun isFormatActive(type: SpanType) = activeFormats.contains(type)
 
-    fun addChecklistItem(text: String = "") { checklistItems.add(ChecklistItem(text = text)) }
+    fun addChecklistItem(text: String = "") {
+        saveSnapshot()
+        checklistItems.add(ChecklistItem(text = text))
+        onContentChanged?.invoke(serializeToJson())
+    }
 
     fun updateChecklistItem(id: String, text: String? = null, checked: Boolean? = null) {
         val idx = checklistItems.indexOfFirst { it.id == id }
-        if (idx >= 0) checklistItems[idx] = checklistItems[idx].copy(
-            text    = text    ?: checklistItems[idx].text,
-            isChecked = checked ?: checklistItems[idx].isChecked
-        )
+        if (idx >= 0) {
+            saveSnapshot()
+            checklistItems[idx] = checklistItems[idx].copy(
+                text    = text    ?: checklistItems[idx].text,
+                isChecked = checked ?: checklistItems[idx].isChecked
+            )
+            // Notify content changed
+            onContentChanged?.invoke(serializeToJson())
+        }
     }
 
-    fun removeChecklistItem(id: String) { checklistItems.removeAll { it.id == id } }
+    fun removeChecklistItem(id: String) {
+        saveSnapshot()
+        checklistItems.removeAll { it.id == id }
+        // Notify content changed
+        onContentChanged?.invoke(serializeToJson())
+    }
+    
+    fun onTextChanged(newValue: TextFieldValue) {
+        if (!isUndoRedoOperation && newValue.text != textFieldValue.text) {
+            saveSnapshot()
+        }
+        textFieldValue = newValue
+    }
 
     fun serializeToJson(): String {
         val gson = com.google.gson.Gson()

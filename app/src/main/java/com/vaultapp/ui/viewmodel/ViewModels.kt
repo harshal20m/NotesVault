@@ -97,7 +97,12 @@ class NoteEditViewModel @Inject constructor(private val repo: NoteRepository) : 
 
     fun saveNote() = viewModelScope.launch {
         val n = _note.value?.copy(title = title, content = content) ?: return@launch
-        if (n.id == 0L) repo.saveNote(n) else repo.updateNote(n)
+        if (n.id == 0L) {
+            val newId = repo.saveNote(n)
+            _note.value = n.copy(id = newId)
+        } else {
+            repo.updateNote(n)
+        }
     }
     fun deleteNote() = viewModelScope.launch {
         _note.value?.id?.takeIf { it != 0L }?.let { repo.deleteNote(it) }
